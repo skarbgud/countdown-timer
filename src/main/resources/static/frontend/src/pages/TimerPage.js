@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
 
 function TimerPage() {
   const { id } = useParams();
@@ -16,8 +14,7 @@ function TimerPage() {
   const [timestamps, setTimestamps] = useState([]);
   const [isExpired, setIsExpired] = useState(false);
   
-  // References to hold WebSocket client
-  const stompClient = useRef(null);
+  // References
   const timerInterval = useRef(null);
   const alertShown = useRef(false);
   
@@ -151,68 +148,9 @@ function TimerPage() {
     if (!id) return;
     
     loadTimer();
-    let reconnectTimeout = null;
-    
-    // Setup WebSocket connection
-    const connectWebSocket = () => {
-      const socket = new SockJS('/ws');
-      stompClient.current = Stomp.over(socket);
-      
-      // 로그 출력 비활성화
-      stompClient.current.debug = null;
-      
-      stompClient.current.connect({}, 
-        // 연결 성공 핸들러
-        () => {
-          // Subscribe to timer updates
-          stompClient.current.subscribe(`/topic/timer/${id}`, (message) => {
-            const updatedTimer = JSON.parse(message.body);
-            setTimer(updatedTimer);
-            
-            // Update target time input field
-            const targetDate = new Date(updatedTimer.targetTime);
-            const localTargetTime = new Date(
-              targetDate.getTime() - targetDate.getTimezoneOffset() * 60000
-            ).toISOString().slice(0, 16);
-            
-            setNewTargetTime(localTargetTime);
-            
-            // Reset expiry status on target time update
-            setIsExpired(false);
-            alertShown.current = false;
-          });
-          
-          // Subscribe to new timestamps
-          stompClient.current.subscribe(`/topic/timer/${id}/timestamp`, (message) => {
-            const newTimestamp = JSON.parse(message.body);
-            setTimestamps((prevTimestamps) => {
-              const updatedTimestamps = [...prevTimestamps, newTimestamp];
-              return updatedTimestamps.sort(
-                (a, b) => new Date(a.capturedAt) - new Date(b.capturedAt)
-              );
-            });
-          });
-        },
-        // 에러 핸들러  
-        (error) => {
-          console.error('WebSocket connection error:', error);
-          // 재연결 로직
-          if (reconnectTimeout) clearTimeout(reconnectTimeout);
-          reconnectTimeout = setTimeout(connectWebSocket, 5000);
-        }
-      );
-    };
-    
-    connectWebSocket();
     
     // Cleanup function
     return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      
-      if (stompClient.current && stompClient.current.connected) {
-        stompClient.current.disconnect();
-      }
-      
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
       }

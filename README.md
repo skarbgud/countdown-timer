@@ -19,7 +19,7 @@
 - Spring Boot 3.2.0
 - Spring WebSocket
 - MyBatis
-- Oracle Database
+- MySQL Database
 - Lombok
 
 ### 프론트엔드
@@ -93,7 +93,7 @@ countdown-timer/
 
 이 명령은 다음을 자동으로 수행합니다:
 - 애플리케이션 빌드
-- Oracle 데이터베이스 컨테이너 시작
+- MySQL 데이터베이스 컨테이너 시작
 - Spring Boot 애플리케이션 컨테이너 시작
 
 ### 2. 수동으로 Docker 실행
@@ -109,23 +109,22 @@ docker-compose up -d
 docker-compose ps
 
 # 로그 확인
-docker-compose logs -f oracle-db
+docker-compose logs -f mysql-db
 docker-compose logs -f timer-app
 ```
 
 ### 3. 서비스 접속
 
 - **카운트다운 타이머 앱**: http://localhost:8088
-- **Oracle Enterprise Manager**: http://localhost:5500
-- **Oracle 데이터베이스**: localhost:1521
+- **MySQL 데이터베이스**: localhost:3307
 
 ## 🔧 개발 환경 설정
 
-### 1. 로컬 Oracle 데이터베이스 실행
+### 1. 로컬 MySQL 데이터베이스 실행
 
 ```bash
-# Oracle만 시작 (개발용)
-./start-oracle.sh
+# MySQL만 시작 (개발용)
+docker-compose up -d mysql-db
 ```
 
 ### 2. 백엔드 실행
@@ -160,40 +159,40 @@ React 앱은 3000 포트에서 시작됩니다.
 ### Local 환경 (기본값)
 - **프로파일**: `local`
 - **포트**: 8088
-- **데이터베이스**: localhost:1521:XE
+- **데이터베이스**: localhost:3307:timer_db
 - **로깅**: DEBUG 레벨
 - **커넥션 풀**: 최대 10개
 
 ### Docker 환경
 - **프로파일**: `docker`
 - **포트**: 8080
-- **데이터베이스**: oracle-db:1521:TIMERDB
+- **데이터베이스**: mysql-db:3306:timer_db
 - **로깅**: INFO 레벨, 파일 출력
 - **커넥션 풀**: 최대 20개
 
 ### Production 환경
 - **프로파일**: `prod`
 - **포트**: 8080
-- **데이터베이스**: prod-db:1521:PRODDB
+- **데이터베이스**: prod-db:3306:timer_prod
 - **로깅**: WARN 레벨, 파일 출력
 - **커넥션 풀**: 최대 15개
 
 ## 📊 Docker 서비스 구성
 
-### oracle-db
-- **이미지**: gvenzl/oracle-xe:21-slim
-- **데이터베이스**: XE
+### mysql-db
+- **이미지**: mysql:8.0
+- **데이터베이스**: timer_db
 - **사용자**: timer_user
-- **포트**: 1521 (DB), 5500 (EM)
+- **포트**: 3307 (외부), 3306 (내부)
 
 ### timer-app
 - **이미지**: 로컬 빌드
 - **포트**: 8088
-- **의존성**: oracle-db (health check 완료 후 시작)
+- **의존성**: mysql-db (health check 완료 후 시작)
 
 ## 🗄️ 데이터베이스 스키마
 
-Oracle 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
+MySQL 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
 
 - `timer`: 타이머 기본 정보 (ID, 기준 시각, 소유자 세션 ID)
 - `timestamps`: 저장된 타임스탬프 정보 (ID, 타이머 ID, 캡처 시각, 남은 시간)
@@ -220,11 +219,11 @@ docker-compose down
 docker-compose restart
 
 # 특정 서비스 로그 확인
-docker-compose logs -f oracle-db
+docker-compose logs -f mysql-db
 docker-compose logs -f timer-app
 
 # 컨테이너 내부 접속
-docker-compose exec oracle-db sqlplus timer_user/timer_password123@//localhost:1521/XE
+docker-compose exec mysql-db mysql -u timer_user -p timer_db
 
 # 볼륨 정리 (주의: 모든 데이터 삭제)
 docker-compose down -v
@@ -235,20 +234,20 @@ SPRING_PROFILES_ACTIVE=docker ./gradlew bootRun
 
 ## ⚠️ 주의사항
 
-- Oracle Express Edition은 약 2-3GB 디스크 공간 필요
-- 첫 시작 시 5-10분 소요될 수 있음
-- Docker Desktop 메모리 할당 확인 필요 (최소 2GB)
+- MySQL은 약 200-500MB 디스크 공간 필요
+- 첫 시작 시 10-30초 소요될 수 있음
+- Docker Desktop 메모리 할당 확인 필요 (최소 1GB)
 - 프로덕션 환경에서는 보안 설정 강화 필요
 
 ## 🚨 문제 해결
 
-### Oracle 연결 문제
+### MySQL 연결 문제
 - Docker 컨테이너가 완전히 시작되었는지 확인
-- 포트 1521이 올바르게 매핑되었는지 확인
+- 포트 3307이 올바르게 매핑되었는지 확인
 - 초기화 스크립트가 성공적으로 실행되었는지 확인
 
 ### 메모리 부족
-- Oracle Express Edition은 최소 2GB RAM이 필요합니다
+- MySQL은 최소 1GB RAM이 필요합니다
 - Docker Desktop의 메모리 할당을 확인하세요
 
 ### 빌드 실패

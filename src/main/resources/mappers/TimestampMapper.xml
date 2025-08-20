@@ -10,12 +10,12 @@
     </resultMap>
     
     <select id="selectNextTimestampId" resultType="long">
-        SELECT timestamp_seq.NEXTVAL FROM DUAL
+        SELECT LAST_INSERT_ID()
     </select>
     
-    <insert id="insertTimestamp" parameterType="com.timer.countdown.model.Timestamp">
-        INSERT INTO timestamps (id, timer_id, captured_at, remaining_time_ms, remaining_time_formatted)
-        VALUES (#{id}, #{timerId}, #{capturedAt}, #{remainingTimeMs}, #{remainingTimeFormatted})
+    <insert id="insertTimestamp" parameterType="com.timer.countdown.model.Timestamp" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO timestamps (timer_id, captured_at, remaining_time_ms, remaining_time_formatted)
+        VALUES (#{timerId}, #{capturedAt}, #{remainingTimeMs}, #{remainingTimeFormatted})
     </insert>
     
     <select id="selectTimestampsByTimerId" parameterType="string" resultMap="timestampResultMap">

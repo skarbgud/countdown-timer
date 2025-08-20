@@ -51,7 +51,7 @@ public class TimerService {
                     .map(timestamp -> TimestampDto.builder()
                             .id(timestamp.getId())
                             .capturedAt(timestamp.getCapturedAt())
-                            .remainingTime(timestamp.getRemainingTime())
+                            .remainingTime(timestamp.getRemainingTimeFormatted())
                             .build())
                     .collect(Collectors.toList());
             
@@ -99,7 +99,8 @@ public class TimerService {
                     .id(nextId)
                     .timerId(timerId)
                     .capturedAt(now)
-                    .remainingTime(remainingTime)
+                    .remainingTimeFormatted(remainingTime)
+                    .remainingTimeMs(calculateRemainingTimeMs(timer.getTargetTime(), now))
                     .build();
             
             timestampMapper.insertTimestamp(timestamp);
@@ -107,11 +108,16 @@ public class TimerService {
             TimestampDto timestampDto = TimestampDto.builder()
                     .id(timestamp.getId())
                     .capturedAt(timestamp.getCapturedAt())
-                    .remainingTime(timestamp.getRemainingTime())
+                    .remainingTime(timestamp.getRemainingTimeFormatted())
                     .build();
             
             messagingTemplate.convertAndSend("/topic/timer/" + timerId + "/timestamp", timestampDto);
             return timestampDto;
         });
+    }
+    
+    private Long calculateRemainingTimeMs(Instant targetTime, Instant currentTime) {
+        long diffMs = targetTime.toEpochMilli() - currentTime.toEpochMilli();
+        return Math.max(0, diffMs);
     }
 }

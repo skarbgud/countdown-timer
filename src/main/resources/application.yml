@@ -18,16 +18,16 @@ server:
       timeout: 120m
 
 ---
-# profile(local) 환경
+# Local 환경 (개발용)
 spring:
   config:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521:XE
+    url: jdbc:mysql://localhost:3306/timer_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: timer_user
     password: timer_password123
-    driver-class-name: oracle.jdbc.OracleDriver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -62,10 +62,10 @@ spring:
     activate:
       on-profile: docker
   datasource:
-    url: jdbc:oracle:thin:@${DB_HOST:oracle-db}:${DB_PORT:1521}:${DB_NAME:XE}
+    url: jdbc:mysql://${DB_HOST:mysql-db}:${DB_PORT:3306}/${DB_NAME:timer_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:timer_user}
     password: ${DB_PASSWORD:timer_password123}
-    driver-class-name: oracle.jdbc.OracleDriver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -102,10 +102,10 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: jdbc:oracle:thin:@${DB_HOST:prod-db}:${DB_PORT:1521}:${DB_NAME:PRODDB}
+    url: jdbc:mysql://${DB_HOST:prod-db}:${DB_PORT:3306}/${DB_NAME:timer_prod}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:countdown_prod}
     password: ${DB_PASSWORD:${DB_PASSWORD}}
-    driver-class-name: oracle.jdbc.OracleDriver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 15
       minimum-idle: 5
