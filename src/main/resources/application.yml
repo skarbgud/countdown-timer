@@ -62,7 +62,7 @@ spring:
     activate:
       on-profile: docker
   datasource:
-    url: jdbc:mysql://${DB_HOST:mysql-db}:${DB_PORT:3307}/${DB_NAME:timer_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${DB_HOST:mysql-db}:${DB_PORT:3306}/${DB_NAME:timer_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:timer_user}
     password: ${DB_PASSWORD:timer_password123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -102,7 +102,7 @@ spring:
     activate:
       on-profile: prod
   datasource:
-    url: jdbc:mysql://${DB_HOST:prod-db}:${DB_PORT:3307}/${DB_NAME:timer_prod}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${DB_HOST:prod-db}:${DB_PORT:3306}/${DB_NAME:timer_prod}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:countdown_prod}
     password: ${DB_PASSWORD:${DB_PASSWORD}}
     driver-class-name: com.mysql.cj.jdbc.Driver
