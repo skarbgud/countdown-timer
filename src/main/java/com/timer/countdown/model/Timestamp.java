@@ -14,5 +14,6 @@ public class Timestamp {
     private Long id;
     private String timerId;
     private Instant capturedAt;
-    private String remainingTime;
+    private Long remainingTimeMs;        // 밀리초 단위 남은 시간
+    private String remainingTimeFormatted; // 포맷된 남은 시간 (HH:mm:ss)
 }

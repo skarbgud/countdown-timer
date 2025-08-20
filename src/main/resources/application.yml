@@ -1,0 +1,135 @@
+spring:
+  profiles:
+    active: local
+  websocket:
+    max-text-message-size: 8192
+    max-binary-message-size: 64000
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss'Z'
+    time-zone: UTC
+
+server:
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 2048
+  servlet:
+    session:
+      timeout: 120m
+
+---
+# profile(local) 환경
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521:XE
+    username: timer_user
+    password: timer_password123
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.timer.countdown.model
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+    cache-enabled: true
+
+logging:
+  level:
+    com.timer.countdown.mapper: DEBUG
+    org.springframework.jdbc: DEBUG
+    com.timer.countdown: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+server:
+  port: 8088
+
+---
+# Docker 환경
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:oracle:thin:@${DB_HOST:oracle-db}:${DB_PORT:1521}:${DB_NAME:XE}
+    username: ${DB_USERNAME:timer_user}
+    password: ${DB_PASSWORD:timer_password123}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.timer.countdown.model
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+    cache-enabled: true
+
+logging:
+  level:
+    com.timer.countdown.mapper: INFO
+    com.timer.countdown: INFO
+    root: INFO
+  file:
+    name: /app/logs/timer-app.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+server:
+  port: 8080
+
+---
+# Production 환경
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:oracle:thin:@${DB_HOST:prod-db}:${DB_PORT:1521}:${DB_NAME:PRODDB}
+    username: ${DB_USERNAME:countdown_prod}
+    password: ${DB_PASSWORD:${DB_PASSWORD}}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.timer.countdown.model
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+    cache-enabled: true
+
+logging:
+  level:
+    com.timer.countdown: WARN
+    root: WARN
+  file:
+    name: /app/logs/timer-app.log
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+server:
+  port: 8080

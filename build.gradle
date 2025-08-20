@@ -22,18 +22,36 @@ repositories {
 }
 
 dependencies {
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    
+    // MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
-    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
+    
+    // Oracle JDBC Driver
+    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.3.0.23.09'
+    
+    // Development Tools
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.3.0.23.09'
     annotationProcessor 'org.projectlombok:lombok'
+    
+    // Test Dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.3'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Spring Boot JAR 플러그인 설정
+jar {
+    enabled = false
+}
+
+bootJar {
+    archiveFileName = 'countdown-timer.jar'
 }

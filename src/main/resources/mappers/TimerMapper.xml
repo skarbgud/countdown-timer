@@ -5,22 +5,24 @@
         <id property="id" column="id"/>
         <result property="targetTime" column="target_time"/>
         <result property="ownerSessionId" column="owner_session_id"/>
+        <result property="createdAt" column="created_at"/>
         <collection property="timestamps" ofType="com.timer.countdown.model.Timestamp">
             <id property="id" column="timestamp_id"/>
             <result property="timerId" column="timer_id"/>
             <result property="capturedAt" column="captured_at"/>
-            <result property="remainingTime" column="remaining_time"/>
+            <result property="remainingTimeMs" column="remaining_time_ms"/>
+            <result property="remainingTimeFormatted" column="remaining_time_formatted"/>
         </collection>
     </resultMap>
     
     <insert id="insertTimer" parameterType="com.timer.countdown.model.Timer">
-        INSERT INTO timer (id, target_time, owner_session_id)
-        VALUES (#{id}, #{targetTime}, #{ownerSessionId})
+        INSERT INTO timer (id, target_time, owner_session_id, created_at)
+        VALUES (#{id}, #{targetTime}, #{ownerSessionId}, #{createdAt})
     </insert>
     
     <select id="selectTimerById" parameterType="string" resultMap="timerResultMap">
-        SELECT t.id, t.target_time, t.owner_session_id,
-               ts.id as timestamp_id, ts.timer_id, ts.captured_at, ts.remaining_time
+        SELECT t.id, t.target_time, t.owner_session_id, t.created_at,
+               ts.id as timestamp_id, ts.timer_id, ts.captured_at, ts.remaining_time_ms, ts.remaining_time_formatted
         FROM timer t
         LEFT JOIN timestamps ts ON t.id = ts.timer_id
         WHERE t.id = #{id}

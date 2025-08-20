@@ -17,11 +17,18 @@ public class Timer {
     private String id;
     private Instant targetTime;
     private String ownerSessionId;
+    private Instant createdAt;
     private List<Timestamp> timestamps = new ArrayList<>();
     
     public void generateId() {
         if (id == null) {
             id = UUID.randomUUID().toString();
+        }
+    }
+    
+    public void setCreatedAt() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
         }
     }
 }

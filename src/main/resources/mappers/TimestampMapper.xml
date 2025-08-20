@@ -5,7 +5,8 @@
         <id property="id" column="id"/>
         <result property="timerId" column="timer_id"/>
         <result property="capturedAt" column="captured_at"/>
-        <result property="remainingTime" column="remaining_time"/>
+        <result property="remainingTimeMs" column="remaining_time_ms"/>
+        <result property="remainingTimeFormatted" column="remaining_time_formatted"/>
     </resultMap>
     
     <select id="selectNextTimestampId" resultType="long">
@@ -13,12 +14,12 @@
     </select>
     
     <insert id="insertTimestamp" parameterType="com.timer.countdown.model.Timestamp">
-        INSERT INTO timestamps (id, timer_id, captured_at, remaining_time)
-        VALUES (#{id}, #{timerId}, #{capturedAt}, #{remainingTime})
+        INSERT INTO timestamps (id, timer_id, captured_at, remaining_time_ms, remaining_time_formatted)
+        VALUES (#{id}, #{timerId}, #{capturedAt}, #{remainingTimeMs}, #{remainingTimeFormatted})
     </insert>
     
     <select id="selectTimestampsByTimerId" parameterType="string" resultMap="timestampResultMap">
-        SELECT id, timer_id, captured_at, remaining_time
+        SELECT id, timer_id, captured_at, remaining_time_ms, remaining_time_formatted
         FROM timestamps
         WHERE timer_id = #{timerId}
         ORDER BY captured_at ASC
