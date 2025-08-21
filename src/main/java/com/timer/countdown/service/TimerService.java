@@ -120,4 +120,10 @@ public class TimerService {
         long diffMs = targetTime.toEpochMilli() - currentTime.toEpochMilli();
         return Math.max(0, diffMs);
     }
+
+    public String generateShareUrl(String timerId) {
+        // 실제 도메인은 환경 설정으로 관리
+        String baseUrl = "http://localhost:3000"; // 또는 @Value로 주입
+        return baseUrl + "/timer/" + timerId;
+    }
 }
