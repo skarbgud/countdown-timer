@@ -1,6 +1,14 @@
 # Dockerfile
 FROM openjdk:17-jdk-slim
 
+# Node.js 설치 (프론트엔드 빌드용)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # 작업 디렉토리 설정
 WORKDIR /app
 
@@ -18,7 +26,7 @@ RUN ./gradlew dependencies --no-daemon
 # 소스 코드 복사
 COPY src src
 
-# 애플리케이션 빌드
+# 애플리케이션 빌드 (프론트엔드 포함)
 RUN ./gradlew clean build -x test --no-daemon
 
 # 로그 디렉토리 생성
