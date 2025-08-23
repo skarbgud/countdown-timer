@@ -367,7 +367,7 @@ const TimerPage = () => {
   return (
     <Box minH="100vh" bg="gray.50" py={8}>
       <Container maxW="4xl">
-        <VStack spacing={8} align="stretch">
+        <VStack align="stretch">
           {/* 헤더 */}
           <Box textAlign="center">
             <Heading size="2xl" mb={4}>
@@ -375,6 +375,9 @@ const TimerPage = () => {
             </Heading>
             <Text fontSize="lg" color="gray.600">
               목표 시각: {new Date(timer.targetTime).toLocaleString()}
+            </Text>
+            <Text fontSize="lg" color="gray.600">
+              {(timer.targetTime)}
             </Text>
           </Box>
 
