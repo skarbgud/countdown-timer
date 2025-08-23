@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
+import { WEBSOCKET_URL } from '../config/websocket';
 import Countdown from 'react-countdown';
 import {
   Box,
@@ -122,10 +123,10 @@ const TimerPage = () => {
         wsRef.current.close();
       }
 
-      console.log('WebSocket 연결 시도: ws://localhost:8088/ws');
+      console.log('WebSocket 연결 시도:', WEBSOCKET_URL);
       console.log('현재 타이머 ID:', timerId);
       
-      wsRef.current = new WebSocket('ws://localhost:8088/ws');
+      wsRef.current = new WebSocket(WEBSOCKET_URL);
       
       // 연결 상태 모니터링
       console.log('WebSocket readyState:', wsRef.current.readyState);
