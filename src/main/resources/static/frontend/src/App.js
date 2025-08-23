@@ -1,16 +1,16 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import TimerPage from './pages/TimerPage';
 
 function App() {
   return (
-    <div className="App">
+    <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/timer/:id" element={<TimerPage />} />
+        <Route path="/timer/:timerId" element={<TimerPage />} />
       </Routes>
-    </div>
+    </Router>
   );
 }
 

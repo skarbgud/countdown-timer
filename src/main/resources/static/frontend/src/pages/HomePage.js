@@ -1,65 +1,46 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
-function HomePage() {
+const HomePage = () => {
   const [targetTime, setTargetTime] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleCreateTimer = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!targetTime) {
-      alert('기준 시각을 선택해주세요');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const targetTimeUTC = new Date(targetTime).toISOString();
-      const response = await axios.post('/api/timers', {
-        targetTime: targetTimeUTC,
-      });
-      
-      navigate(`/timer/${response.data.id}`);
-    } catch (error) {
-      console.error('Error creating timer:', error);
-      alert('타이머 생성에 실패했습니다. 다시 시도해주세요.');
-    } finally {
-      setLoading(false);
+
+    const response = await fetch('http://localhost:8088/api/timers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        targetTime: new Date(targetTime).toISOString()
+      })
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      navigate(`/timer/${result.data.timerId}`);
     }
   };
 
-  // Set the min datetime to current time
-  const now = new Date();
-  const nowLocalString = new Date(
-    now.getTime() - now.getTimezoneOffset() * 60000
-  ).toISOString().slice(0, 16);
-
   return (
-    <div className="container">
-      <h1>카운트다운 타이머</h1>
-      
-      <form onSubmit={handleCreateTimer}>
-        <div className="form-group">
-          <label htmlFor="targetTime">기준 시각 (UTC):</label>
+    <div style={{ maxWidth: '600px', margin: '50px auto', padding: '20px' }}>
+      <h1>타이머 생성</h1>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '20px' }}>
+          <label>기준 시각:</label>
           <input
             type="datetime-local"
-            id="targetTime"
             value={targetTime}
-            min={nowLocalString}
             onChange={(e) => setTargetTime(e.target.value)}
             required
+            style={{ marginLeft: '10px', padding: '5px' }}
           />
         </div>
-        
-        <button type="submit" disabled={loading}>
-          {loading ? '생성중...' : '카운트다운 타이머 생성'}
-        </button>
+        <button type="submit">타이머 생성</button>
       </form>
     </div>
   );
-}
+};
 
 export default HomePage;

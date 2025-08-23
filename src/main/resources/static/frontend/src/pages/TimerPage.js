@@ -1,279 +1,182 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 
-function TimerPage() {
-  const { id } = useParams();
+const TimerPage = () => {
+  const { timerId } = useParams();
   const [timer, setTimer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [remainingTime, setRemainingTime] = useState('');
-  const [currentTime, setCurrentTime] = useState('');
-  const [editMode, setEditMode] = useState(false);
   const [newTargetTime, setNewTargetTime] = useState('');
-  const [timestamps, setTimestamps] = useState([]);
-  const [isExpired, setIsExpired] = useState(false);
-  
-  // References
-  const timerInterval = useRef(null);
-  const alertShown = useRef(false);
-  
-  // Calculate offset between client time and server time
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
-  
-  // Format time function
-  const formatTime = (totalSeconds) => {
-    if (totalSeconds <= 0) return '00:00:00';
-    
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes
-      .toString()
-      .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-  
-  // Function to format ISO date to readable format
-  const formatISODate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toISOString();
-  };
-  
-  // Load timer data from the server
-  const loadTimer = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`/api/timers/${id}`);
-      
-      // Calculate time offset between server and client
-      const serverTime = new Date(response.data.serverTime).getTime();
-      const clientTime = new Date().getTime();
-      const offset = serverTime - clientTime;
-      setServerTimeOffset(offset);
-      
-      setTimer(response.data);
-      
-      // Sort timestamps by capturedAt in ascending order
-      const sortedTimestamps = (response.data.timestamps || []).sort(
-        (a, b) => new Date(a.capturedAt) - new Date(b.capturedAt)
-      );
-      setTimestamps(sortedTimestamps);
-      
-      // Set the new target time input with the current value
-      const targetDate = new Date(response.data.targetTime);
-      const localTargetTime = new Date(
-        targetDate.getTime() - targetDate.getTimezoneOffset() * 60000
-      ).toISOString().slice(0, 16);
-      
-      setNewTargetTime(localTargetTime);
-      
-      // Check if timer has already expired
-      const targetTime = new Date(response.data.targetTime).getTime();
-      const adjustedClientTime = clientTime + offset;
-      if (targetTime <= adjustedClientTime) {
-        setIsExpired(true);
-        setRemainingTime('00:00:00');
-        if (!alertShown.current) {
-          setTimeout(() => {
-            alert('기준 시각에 도달했습니다!');
-            alertShown.current = true;
-          }, 500);
-        }
-      } else {
-        alertShown.current = false;
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Error loading timer:', err);
-      setError('타이머 로딩에 실패했습니다. 나중에 다시 시도해주세요.');
-      setLoading(false);
-    }
-  };
-  
-  // Update target time function
-  const handleUpdateTargetTime = async () => {
-    try {
-      if (!newTargetTime) {
-        alert('유효한 기준 시각을 선택해주세요');
-        return;
-      }
-      
-      const targetTimeUTC = new Date(newTargetTime).toISOString();
-      
-      await axios.put(`/api/timers/${id}/target-time`, {
-        targetTime: targetTimeUTC,
-      });
-      
-      setEditMode(false);
-      loadTimer(); // Reload timer with updated data
-    } catch (err) {
-      console.error('Error updating target time:', err);
-      alert('기준 시각 업데이트에 실패했습니다. 타이머의 소유자가 아닐 수 있습니다.');
-    }
-  };
-  
-  // Save timestamp function
-  const handleSaveTimestamp = async () => {
-    if (isExpired) return; // 만료된 타이머에는 타임스탬프를 저장하지 않음
-    
-    try {
-      await axios.post(`/api/timers/${id}/timestamps`, {
-        remainingTime,
-      });
-      
-      // The timestamp will be added via WebSocket
-    } catch (err) {
-      console.error('Error saving timestamp:', err);
-      alert('타임스탬프 저장에 실패했습니다');
-    }
-  };
-  
-  // Generate and copy share link
-  const handleShareLink = () => {
-    const shareLink = window.location.href;
-    navigator.clipboard.writeText(shareLink)
-      .then(() => {
-        alert('공유 링크가 클립보드에 복사되었습니다!');
-      })
-      .catch((err) => {
-        console.error('Failed to copy link:', err);
-        alert('공유 링크: ' + shareLink);
-      });
-  };
-  
-  // Connect to WebSocket - 서버 리소스 절약을 위해 최적화된 방식 사용
+  const [isEditing, setIsEditing] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const wsRef = useRef(null);
+
+  // 타이머 로드
   useEffect(() => {
-    if (!id) return;
-    
     loadTimer();
-    
-    // Cleanup function
-    return () => {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
+    connectWebSocket();
+    return () => wsRef.current?.close();
+  }, [timerId]);
+
+  const loadTimer = async () => {
+    const response = await fetch(`http://localhost:8088/api/timers/${timerId}`, {
+      credentials: 'include'
+    });
+    const result = await response.json();
+    if (result.success) {
+      setTimer(result.data);
+    }
+  };
+
+  const connectWebSocket = () => {
+    wsRef.current = new WebSocket('ws://localhost:8088/ws');
+
+    wsRef.current.onopen = () => {
+      wsRef.current.send(JSON.stringify({
+        type: 'join',
+        timerId: timerId
+      }));
+    };
+
+    wsRef.current.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'targetTimeUpdated') {
+        setTimer(prev => ({
+          ...prev,
+          targetTime: message.targetTime
+        }));
+      } else if (message.type === 'timestampAdded') {
+        loadTimer(); // 새로고침
+      } else if (message.type === 'timerExpired') {
+        alert('시간이 다 되었습니다!');
       }
     };
-  }, [id]);
-  
-  // Set up timer update interval - 클라이언트 측에서 실시간 카운트다운 처리
+  };
+
+  // 남은 시간 계산
   useEffect(() => {
     if (!timer) return;
-    
-    const updateRemainingTime = () => {
-      const targetTime = new Date(timer.targetTime).getTime();
-      const now = new Date().getTime() + serverTimeOffset;
-      
-      // Calculate difference in seconds
-      const diff = Math.floor((targetTime - now) / 1000);
-      
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const target = new Date(timer.targetTime);
+      const diff = target - now;
+
       if (diff <= 0) {
         setRemainingTime('00:00:00');
-        
-        if (!isExpired) {
-          setIsExpired(true);
-          clearInterval(timerInterval.current);
-          
-          // Show alert when timer expires (only once)
-          if (!alertShown.current) {
-            alert('기준 시각에 도달했습니다!');
-            alertShown.current = true;
-          }
-        }
-        
         return;
       }
-      
-      setRemainingTime(formatTime(diff));
-      setCurrentTime(new Date(now).toISOString());
-    };
-    
-    // Update immediately
-    updateRemainingTime();
-    
-    // Then update every second
-    timerInterval.current = setInterval(updateRemainingTime, 1000);
-    
-    return () => {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
-    };
-  }, [timer, serverTimeOffset, isExpired]);
-  
-  // Set the min datetime to current time for the update form
-  const now = new Date();
-  const nowLocalString = new Date(
-    now.getTime() - now.getTimezoneOffset() * 60000
-  ).toISOString().slice(0, 16);
-  
-  if (loading) return <div className="container">타이머 로딩중...</div>;
-  if (error) return <div className="container">{error}</div>;
-  if (!timer) return <div className="container">타이머를 찾을 수 없습니다</div>;
-  
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setRemainingTime(
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const updateTargetTime = async () => {
+    await fetch(`http://localhost:8088/api/timers/${timerId}/target-time`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        targetTime: new Date(newTargetTime).toISOString()
+      })
+    });
+    setIsEditing(false);
+    setNewTargetTime('');
+  };
+
+  const saveTimestamp = async () => {
+    await fetch(`http://localhost:8088/api/timers/${timerId}/timestamps`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        remainingTime: remainingTime
+      })
+    });
+  };
+
+  const generateShareLink = async () => {
+    const response = await fetch(`http://localhost:8088/api/timers/${timerId}/share`);
+    const result = await response.json();
+    if (result.success) {
+      const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
+      setShareUrl(fullUrl);
+      navigator.clipboard.writeText(fullUrl);
+      alert('공유 링크가 클립보드에 복사되었습니다.');
+    }
+  };
+
+  if (!timer) return <div>로딩 중...</div>;
+
   return (
-    <div className="container">
-      <h1>카운트다운 타이머</h1>
-      
-      {/* 화면 예시에 맞게 디자인 변경 */}
-      <div className="timer-box">
-        <div className="info-row">
-          <span>기준 시각: {formatISODate(timer.targetTime)} </span>
-          {timer.isOwner && !isExpired && (
-            <button onClick={() => setEditMode(true)} className="secondary">
-              [ 기준 시각 수정 ]
-            </button>
-          )}
+    <div style={{ maxWidth: '800px', margin: '20px auto', padding: '20px' }}>
+      <h1>타이머</h1>
+
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <h2>기준 시각: {new Date(timer.targetTime).toLocaleString()}</h2>
+        {timer.isOwner && !timer.isExpired && (
+          <button onClick={() => setIsEditing(!isEditing)}>
+            기준 시각 수정
+          </button>
+        )}
+      </div>
+
+      {isEditing && (
+        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <input
+            type="datetime-local"
+            value={newTargetTime}
+            onChange={(e) => setNewTargetTime(e.target.value)}
+          />
+          <button onClick={updateTargetTime}>수정</button>
+          <button onClick={() => setIsEditing(false)}>취소</button>
         </div>
-        
-        <div className="info-row">
-          <span>현재 시간: {currentTime} (UTC+0)</span>
-        </div>
-        
-        <div className="timer-display">
+      )}
+
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <h2>현재 시간: {new Date().toLocaleString()}</h2>
+        <h1 style={{ fontSize: '48px', color: timer.isExpired ? 'red' : 'blue' }}>
           남은 시간: ⏳ {remainingTime}
+        </h1>
+      </div>
+
+      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+        <button
+          onClick={saveTimestamp}
+          disabled={timer.isExpired}
+          style={{ marginRight: '10px' }}
+        >
+          timestamp 저장
+        </button>
+        <button onClick={generateShareLink}>
+          공유 링크 생성
+        </button>
+      </div>
+
+      {shareUrl && (
+        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f0f0' }}>
+          <strong>공유 링크:</strong> {shareUrl}
         </div>
-        
-        {editMode && (
-          <div className="edit-form">
-            <input
-              type="datetime-local"
-              value={newTargetTime}
-              min={nowLocalString}
-              onChange={(e) => setNewTargetTime(e.target.value)}
-            />
-            <button onClick={handleUpdateTargetTime} disabled={isExpired}>
-              저장
-            </button>
-            <button onClick={() => setEditMode(false)}>취소</button>
-          </div>
-        )}
-      </div>
-      
-      <div className="controls">
-        <button onClick={handleSaveTimestamp} disabled={isExpired}>
-          [ timestamp 저장 ]
-        </button>
-        <button onClick={handleShareLink} className="secondary">
-          [ 공유 링크 생성 ]
-        </button>
-      </div>
-      
-      <div className="timestamp-list">
+      )}
+
+      <div>
         <h3>저장된 Timestamp 리스트:</h3>
-        {timestamps.length === 0 ? (
-          <p>저장된 타임스탬프가 없습니다</p>
-        ) : (
-          timestamps.map((ts) => (
-            <div className="timestamp-item" key={ts.id}>
-              ⏳ {ts.remainingTime} ({formatISODate(ts.capturedAt)})
-            </div>
-          ))
-        )}
+        {timer.timestamps.map((ts, index) => (
+          <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc' }}>
+            ⏳ {ts.remainingTime} ({new Date(ts.capturedTime).toLocaleString()})
+          </div>
+        ))}
       </div>
     </div>
   );
-}
+};
 
 export default TimerPage;
