@@ -32,10 +32,10 @@
     </select>
     
     <update id="updateTimer" parameterType="com.timer.countdown.model.Timer">
-        UPDATE TIMER T
-        SET    T.TARGET_TIME = #{targetTime}
-             , T.IS_EXPIRED  = #{isExpired}
-             , T.UPDATED_AT  = #{updatedAt}
-        WHERE  T.TIMER_ID    = #{timerId}
+        UPDATE TIMER
+        SET    TARGET_TIME = #{targetTime}
+             , IS_EXPIRED  = #{isExpired}
+             , UPDATED_AT  = #{updatedAt}
+        WHERE  TIMER_ID    = #{timerId}
     </update>
 </mapper>
