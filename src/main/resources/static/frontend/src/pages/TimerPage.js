@@ -44,6 +44,7 @@ const TimerPage = () => {
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [timerUpdateKey, setTimerUpdateKey] = useState(0); // 타이머 업데이트를 위한 key
   const wsRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
@@ -148,8 +149,30 @@ const TimerPage = () => {
         console.log('WebSocket 메시지 수신:', message);
         
         if (message.type === 'targetTimeUpdated') {
-          // 타이머 업데이트 시 전체 타이머 정보를 다시 로드
-          loadTimer();
+          // 타이머 업데이트 시 즉시 상태 업데이트
+          if (timer) {
+            const updatedTimer = {
+              ...timer,
+              targetTime: message.targetTime,
+              expired: message.isExpired
+            };
+            setTimer(updatedTimer);
+            
+            // 서버 시간 업데이트
+            if (message.serverTime) {
+              const serverTimeObj = new Date(message.serverTime);
+              setServerTime(serverTimeObj);
+              
+              // 서버 시간과 로컬 시간의 차이 계산
+              const localTime = new Date();
+              const offset = localTime.getTime() - serverTimeObj.getTime();
+              setServerTimeOffset(offset);
+            }
+          }
+          
+          // Countdown 컴포넌트 강제 리렌더링
+          setTimerUpdateKey(prev => prev + 1);
+          
           toast({
             title: '타이머 업데이트',
             description: '목표 시간이 업데이트되었습니다.',
@@ -160,6 +183,27 @@ const TimerPage = () => {
           });
         } else if (message.type === 'timestampAdded') {
           loadTimer(); // 새로고침
+        } else if (message.type === 'timerExpired') {
+          // 타이머 만료 시 즉시 상태 업데이트
+          if (timer) {
+            setTimer(prev => ({
+              ...prev,
+              expired: true
+            }));
+          }
+          
+          // Countdown 컴포넌트 강제 리렌더링
+          setTimerUpdateKey(prev => prev + 1);
+          
+          // 토스트 메시지로 알림
+          toast({
+            title: '시간 종료!',
+            description: '설정된 시간이 다 되었습니다!',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+            position: 'top-left',
+          });
         }
       };
 
@@ -227,6 +271,37 @@ const TimerPage = () => {
       }
     };
   }, [loadTimer, connectWebSocket]);
+
+  // 주기적으로 타이머 상태 체크 (1초마다) - 서버 리소스 최소화를 위해 클라이언트에서만 처리
+  useEffect(() => {
+    if (!timer || timer.expired) return;
+    
+    const interval = setInterval(() => {
+      const now = new Date();
+      const targetTime = new Date(timer.targetTime);
+      
+      if (now >= targetTime && !timer.expired) {
+        // 로컬에서 만료 상태 업데이트
+        setTimer(prev => ({
+          ...prev,
+          expired: true
+        }));
+        setTimerUpdateKey(prev => prev + 1);
+        
+        // 토스트 메시지로 알림
+        toast({
+          title: '시간 종료!',
+          description: '설정된 시간이 다 되었습니다!',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+          position: 'top-left',
+        });
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [timer]);
 
   // 현재 시간 업데이트
   useEffect(() => {
@@ -387,15 +462,39 @@ const TimerPage = () => {
       if (result.success) {
         const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
         setShareUrl(fullUrl);
-        onCopy();
-        toast({
-          title: '공유 링크 생성',
-          description: '공유 링크가 클립보드에 복사되었습니다.',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-          position: 'top-left',
-        });
+        
+        // 클립보드에 복사
+        try {
+          await navigator.clipboard.writeText(fullUrl);
+          toast({
+            title: '공유 링크 생성',
+            description: '공유 링크가 클립보드에 복사되었습니다.',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+            position: 'top-left',
+          });
+        } catch (clipboardError) {
+          // 클립보드 API가 지원되지 않는 경우 fallback
+          console.warn('클립보드 API 지원 안됨, fallback 사용:', clipboardError);
+          
+          // 임시 input 요소를 생성하여 복사
+          const tempInput = document.createElement('input');
+          tempInput.value = fullUrl;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempInput);
+          
+          toast({
+            title: '공유 링크 생성',
+            description: '공유 링크가 클립보드에 복사되었습니다.',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+            position: 'top-left',
+          });
+        }
       } else {
         throw new Error(result.message || '공유 링크 생성에 실패했습니다.');
       }
@@ -454,7 +553,7 @@ const TimerPage = () => {
           </Box>
 
           {/* 목표 시간 수정 */}
-          {console.log("렌더링 조건 확인2:", { owner: timer?.owner, expired: timer?.expired, timer })}
+          {console.log("렌더링 조건 확인2:", { owner: timer?.isOwner, expired: timer?.isExpired, timer })}
           {timer.isOwner && !timer.isExpired && (
             <Card>
               <CardBody>
@@ -512,6 +611,7 @@ const TimerPage = () => {
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
                   {timer && !timer.expired ? (
                     <Countdown
+                      key={timerUpdateKey} // key를 통해 강제 리렌더링
                       date={new Date(timer.targetTime)}
                       renderer={({ hours, minutes, seconds, completed }) => {
                         if (completed) {
