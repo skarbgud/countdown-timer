@@ -19,10 +19,9 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
 
-# build.gradle과 gradle.properties 복사 (캐시 최적화)
+# build.gradle과 settings.gradle 복사
 COPY build.gradle .
 COPY settings.gradle .
-COPY gradle.properties .
 
 # 의존성 다운로드
 RUN ./gradlew dependencies --no-daemon
