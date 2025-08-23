@@ -437,7 +437,7 @@ const TimerPage = () => {
                     color={timer.isExpired ? 'red.500' : 'blue.500'}
                     fontWeight="bold"
                   >
-                    <TimeIcon boxSize={8} mr={2} />
+                    ⏳
                     {remainingTime}
                   </StatNumber>
                   <StatHelpText>
@@ -461,7 +461,7 @@ const TimerPage = () => {
                   loadingText="저장 중..."
                   leftIcon={<CheckIcon />}
                 >
-                  timestamp 저장
+                  타임스탬프 저장
                 </Button>
                 
                 <Button
@@ -520,7 +520,7 @@ const TimerPage = () => {
                       <HStack justify="space-between">
                         <HStack>
                           <Badge colorScheme="blue" variant="subtle">
-                            <TimeIcon boxSize={3} mr={1} />
+                            ⏳
                             {ts.remainingTime}
                           </Badge>
                           <Text fontSize="sm" color="gray.600">
