@@ -1,6 +1,34 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  Divider,
+  useToast,
+  Spinner,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  IconButton,
+  useClipboard,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+} from '@chakra-ui/react';
+import { CopyIcon, EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
 
 const TimerPage = () => {
   const { timerId } = useParams();
@@ -10,9 +38,13 @@ const TimerPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const wsRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const toast = useToast();
+  const { hasCopied, onCopy } = useClipboard(shareUrl);
 
   // 타이머 로드 함수를 useCallback으로 메모이제이션
   const loadTimer = useCallback(async () => {
@@ -33,15 +65,29 @@ const TimerPage = () => {
       if (result.success) {
         setTimer(result.data);
       } else {
-        alert('타이머 로드 실패: ' + result.message);
+        toast({
+          title: '타이머 로드 실패',
+          description: result.message,
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+          position: 'top-left',
+        });
       }
     } catch (error) {
       console.error('타이머 로드 실패:', error);
-      alert('타이머를 찾을 수 없습니다: ' + error.message);
+      toast({
+        title: '오류 발생',
+        description: '타이머를 찾을 수 없습니다: ' + error.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-left',
+      });
     } finally {
       setLoading(false);
     }
-  }, [timerId]);
+  }, [timerId, toast]);
 
   // WebSocket 연결 함수를 useCallback으로 메모이제이션
   const connectWebSocket = useCallback(() => {
@@ -83,10 +129,25 @@ const TimerPage = () => {
             ...prev,
             targetTime: message.targetTime
           }));
+          toast({
+            title: '타이머 업데이트',
+            description: '목표 시간이 업데이트되었습니다.',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+            position: 'top-left',
+          });
         } else if (message.type === 'timestampAdded') {
           loadTimer(); // 새로고침
         } else if (message.type === 'timerExpired') {
-          alert('시간이 다 되었습니다!');
+          toast({
+            title: '시간 종료!',
+            description: '설정된 시간이 다 되었습니다!',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+            position: 'top-left',
+          });
         }
       };
 
@@ -136,7 +197,7 @@ const TimerPage = () => {
         console.error('WebSocket 최대 재연결 시도 횟수 초과');
       }
     }
-  }, [timerId, loadTimer]);
+  }, [timerId, loadTimer, toast]);
 
   // 타이머 로드와 WebSocket 연결
   useEffect(() => {
@@ -182,103 +243,298 @@ const TimerPage = () => {
   }, [timer]);
 
   const updateTargetTime = async () => {
-    await fetch(`http://localhost:8088/api/timers/${timerId}/target-time`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        targetTime: new Date(newTargetTime).toISOString()
-      })
-    });
-    setIsEditing(false);
-    setNewTargetTime('');
-  };
-
-  const saveTimestamp = async () => {
-    await fetch(`http://localhost:8088/api/timers/${timerId}/timestamps`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        remainingTime: remainingTime
-      })
-    });
-  };
-
-  const generateShareLink = async () => {
-    const response = await fetch(`http://localhost:8088/api/timers/${timerId}/share`);
-    const result = await response.json();
-    if (result.success) {
-      const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
-      setShareUrl(fullUrl);
-      navigator.clipboard.writeText(fullUrl);
-      alert('공유 링크가 클립보드에 복사되었습니다.');
+    setIsUpdating(true);
+    try {
+      await fetch(`http://localhost:8088/api/timers/${timerId}/target-time`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          targetTime: new Date(newTargetTime).toISOString()
+        })
+      });
+      setIsEditing(false);
+      setNewTargetTime('');
+              toast({
+          title: '성공',
+          description: '목표 시간이 업데이트되었습니다.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-left',
+        });
+    } catch (error) {
+      toast({
+        title: '오류 발생',
+        description: '목표 시간 업데이트에 실패했습니다.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-left',
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  if (loading) return <div>로딩 중...</div>;
-  if (!timer) return <div>타이머를 찾을 수 없습니다.</div>;
+  const saveTimestamp = async () => {
+    setIsSaving(true);
+    try {
+      await fetch(`http://localhost:8088/api/timers/${timerId}/timestamps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          remainingTime: remainingTime
+        })
+      });
+              toast({
+          title: '성공',
+          description: '타임스탬프가 저장되었습니다.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-left',
+        });
+    } catch (error) {
+      toast({
+        title: '오류 발생',
+        description: '타임스탬프 저장에 실패했습니다.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-left',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const generateShareLink = async () => {
+    try {
+      const response = await fetch(`http://localhost:8088/api/timers/${timerId}/share`);
+      const result = await response.json();
+      if (result.success) {
+        const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
+        setShareUrl(fullUrl);
+        onCopy();
+        toast({
+          title: '공유 링크 생성',
+          description: '공유 링크가 클립보드에 복사되었습니다.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-left',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: '오류 발생',
+        description: '공유 링크 생성에 실패했습니다.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-left',
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box minH="100vh" display="flex" alignItems="center" justifyContent="center">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="brand.500" />
+          <Text fontSize="lg" color="gray.600">타이머를 불러오는 중...</Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  if (!timer) {
+    return (
+      <Box minH="100vh" display="flex" alignItems="center" justifyContent="center">
+        <Alert status="error" maxW="md">
+          <AlertIcon />
+          <AlertTitle>타이머를 찾을 수 없습니다!</AlertTitle>
+          <AlertDescription>
+            요청하신 타이머가 존재하지 않거나 접근 권한이 없습니다.
+          </AlertDescription>
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '20px auto', padding: '20px' }}>
-      <h1>타이머</h1>
+    <Box minH="100vh" bg="gray.50" py={8}>
+      <Container maxW="4xl">
+        <VStack spacing={8} align="stretch">
+          {/* 헤더 */}
+          <Box textAlign="center">
+            <Heading size="2xl" mb={4}>
+              카운트다운 타이머
+            </Heading>
+            <Text fontSize="lg" color="gray.600">
+              목표 시각: {new Date(timer.targetTime).toLocaleString()}
+            </Text>
+          </Box>
 
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h2>기준 시각: {new Date(timer.targetTime).toLocaleString()}</h2>
-        {timer.isOwner && !timer.isExpired && (
-          <button onClick={() => setIsEditing(!isEditing)}>
-            기준 시각 수정
-          </button>
-        )}
-      </div>
+          {/* 목표 시간 수정 */}
+          {timer.isOwner && !timer.isExpired && (
+            <Card>
+              <CardBody>
+                <HStack justify="space-between" align="center">
+                  <Text fontWeight="semibold">목표 시간 수정</Text>
+                  <IconButton
+                    icon={isEditing ? <CloseIcon /> : <EditIcon />}
+                    onClick={() => setIsEditing(!isEditing)}
+                    colorScheme="brand"
+                    variant="ghost"
+                    aria-label={isEditing ? "수정 취소" : "목표 시간 수정"}
+                  />
+                </HStack>
+                
+                {isEditing && (
+                  <VStack mt={4} spacing={4}>
+                    <HStack w="100%">
+                      <Input
+                        type="datetime-local"
+                        value={newTargetTime}
+                        onChange={(e) => setNewTargetTime(e.target.value)}
+                        size="md"
+                      />
+                      <Button
+                        onClick={updateTargetTime}
+                        colorScheme="brand"
+                        isLoading={isUpdating}
+                        loadingText="수정 중..."
+                      >
+                        수정
+                      </Button>
+                    </HStack>
+                  </VStack>
+                )}
+              </CardBody>
+            </Card>
+          )}
 
-      {isEditing && (
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <input
-            type="datetime-local"
-            value={newTargetTime}
-            onChange={(e) => setNewTargetTime(e.target.value)}
-          />
-          <button onClick={updateTargetTime}>수정</button>
-          <button onClick={() => setIsEditing(false)}>취소</button>
-        </div>
-      )}
+          {/* 현재 시간과 남은 시간 */}
+          <Card>
+            <CardBody>
+              <VStack spacing={6}>
+                <Stat textAlign="center">
+                  <StatLabel fontSize="lg" color="gray.600">현재 시간</StatLabel>
+                  <StatNumber fontSize="2xl" color="gray.800">
+                    {new Date().toLocaleString()}
+                  </StatNumber>
+                </Stat>
+                
+                <Divider />
+                
+                <Stat textAlign="center">
+                  <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
+                  <StatNumber 
+                    fontSize="6xl" 
+                    color={timer.isExpired ? 'red.500' : 'brand.500'}
+                    fontWeight="bold"
+                  >
+                    ⏳ {remainingTime}
+                  </StatNumber>
+                  <StatHelpText>
+                    {timer.isExpired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
+                  </StatHelpText>
+                </Stat>
+              </VStack>
+            </CardBody>
+          </Card>
 
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h2>현재 시간: {new Date().toLocaleString()}</h2>
-        <h1 style={{ fontSize: '48px', color: timer.isExpired ? 'red' : 'blue' }}>
-          남은 시간: ⏳ {remainingTime}
-        </h1>
-      </div>
+          {/* 액션 버튼들 */}
+          <Card>
+            <CardBody>
+              <HStack spacing={4} justify="center" flexWrap="wrap">
+                <Button
+                  onClick={saveTimestamp}
+                  disabled={timer.isExpired}
+                  colorScheme="purple"
+                  size="lg"
+                  isLoading={isSaving}
+                  loadingText="저장 중..."
+                  leftIcon={<CheckIcon />}
+                >
+                  timestamp 저장
+                </Button>
+                
+                <Button
+                  onClick={generateShareLink}
+                  colorScheme="teal"
+                  size="lg"
+                  leftIcon={<CopyIcon />}
+                >
+                  공유 링크 생성
+                </Button>
+              </HStack>
+            </CardBody>
+          </Card>
 
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <button
-          onClick={saveTimestamp}
-          disabled={timer.isExpired}
-          style={{ marginRight: '10px' }}
-        >
-          timestamp 저장
-        </button>
-        <button onClick={generateShareLink}>
-          공유 링크 생성
-        </button>
-      </div>
+          {/* 공유 링크 표시 */}
+          {shareUrl && (
+            <Card>
+              <CardBody>
+                <VStack spacing={3}>
+                  <Text fontWeight="semibold">공유 링크</Text>
+                  <HStack w="100%" spacing={2}>
+                    <Input value={shareUrl} isReadOnly />
+                    <IconButton
+                      icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
+                      onClick={onCopy}
+                      colorScheme={hasCopied ? "green" : "brand"}
+                      aria-label="링크 복사"
+                    />
+                  </HStack>
+                </VStack>
+              </CardBody>
+            </Card>
+          )}
 
-      {shareUrl && (
-        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f0f0' }}>
-          <strong>공유 링크:</strong> {shareUrl}
-        </div>
-      )}
-
-      <div>
-        <h3>저장된 Timestamp 리스트:</h3>
-        {timer.timestamps.map((ts, index) => (
-          <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc' }}>
-            ⏳ {ts.remainingTime} ({new Date(ts.capturedTime).toLocaleString()})
-          </div>
-        ))}
-      </div>
-    </div>
+          {/* 타임스탬프 리스트 */}
+          <Card>
+            <CardHeader>
+              <Heading size="md">저장된 타임스탬프</Heading>
+            </CardHeader>
+            <CardBody>
+              {timer.timestamps.length === 0 ? (
+                <Text color="gray.500" textAlign="center" py={8}>
+                  아직 저장된 타임스탬프가 없습니다.
+                </Text>
+              ) : (
+                <VStack spacing={3} align="stretch">
+                  {timer.timestamps.map((ts, index) => (
+                    <Box
+                      key={index}
+                      p={4}
+                      bg="gray.50"
+                      borderRadius="md"
+                      borderLeft="4px solid"
+                      borderLeftColor="brand.500"
+                    >
+                      <HStack justify="space-between">
+                        <HStack>
+                          <Badge colorScheme="brand" variant="subtle">
+                            ⏳ {ts.remainingTime}
+                          </Badge>
+                          <Text fontSize="sm" color="gray.600">
+                            {new Date(ts.capturedTime).toLocaleString()}
+                          </Text>
+                        </HStack>
+                      </HStack>
+                    </Box>
+                  ))}
+                </VStack>
+              )}
+            </CardBody>
+          </Card>
+        </VStack>
+      </Container>
+    </Box>
   );
 };
 
