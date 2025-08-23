@@ -3,8 +3,6 @@ services:
     name: countdown-timer-app
     env: docker
     plan: free
-    buildCommand: docker build -f Dockerfile.render -t countdown-timer .
-    startCommand: docker run -p 8080:8080 countdown-timer
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
