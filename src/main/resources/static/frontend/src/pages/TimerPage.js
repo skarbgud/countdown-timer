@@ -377,7 +377,7 @@ const TimerPage = () => {
               목표 시각: {new Date(timer.targetTime).toLocaleString()}
             </Text>
             <Text fontSize="lg" color="gray.600">
-              {(timer.targetTime)}
+              {(timer.targetTime)} (ISO 8601 형식)
             </Text>
           </Box>
 
@@ -490,7 +490,7 @@ const TimerPage = () => {
                     <IconButton
                       icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
                       onClick={onCopy}
-                      colorScheme={hasCopied ? "green" : "brand"}
+                      colorScheme={hasCopied ? "orange" : "yellow"}
                       aria-label="링크 복사"
                     />
                   </HStack>
