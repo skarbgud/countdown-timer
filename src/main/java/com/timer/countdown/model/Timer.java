@@ -19,5 +19,6 @@ public class Timer {
     private boolean isExpired;      //만료여부
     private Instant createdAt;      //생성일
     private Instant updatedAt;      //수정일
+    @Builder.Default
     private List<Timestamp> timestamps = new ArrayList<>();
 }
