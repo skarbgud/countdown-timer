@@ -71,7 +71,7 @@ public class TimerController {
      * @param request HTTP 요청 객체 (Owner 권한 확인용)
      * @return 업데이트된 타이머 정보
      */
-    @PutMapping("/{timerId}")
+    @PutMapping("/{timerId}/target-time")
     public ResponseEntity<ResponseDto<TimerDto>> updateTargetTime(
             @PathVariable String timerId,
             @RequestBody Map<String, String> payload,
