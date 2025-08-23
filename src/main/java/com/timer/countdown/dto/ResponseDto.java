@@ -10,28 +10,39 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResponseDto<T> {
-    private String status;
-    private String message;
-    private T data;
 
+    private boolean success;    //성공 여부
+    private String message;     //응답 메시지
+    private T data;             //응답 데이터
+    private String errorCode;   //에러 코드 (실패 시)
+
+    /**
+     * 성공 응답 생성
+     */
     public static <T> ResponseDto<T> success(T data) {
         return ResponseDto.<T>builder()
-                .status("success")
+                .success(true)
                 .data(data)
                 .build();
     }
 
+    /**
+     * 성공 응답 생성 (메시지 포함)
+     */
     public static <T> ResponseDto<T> success(T data, String message) {
         return ResponseDto.<T>builder()
-                .status("success")
+                .success(true)
                 .message(message)
                 .data(data)
                 .build();
     }
 
-    public static <T> ResponseDto<T> error(String message) {
+    /**
+     * 실패 응답 생성 (메시지만)
+     */
+    public static <T> ResponseDto<T> failure(String message) {
         return ResponseDto.<T>builder()
-                .status("error")
+                .success(false)
                 .message(message)
                 .build();
     }
