@@ -4,8 +4,11 @@ FROM openjdk:17-jdk-slim
 # Node.js 설치 (프론트엔드 빌드용)
 RUN apt-get update && apt-get install -y \
     curl \
+    gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
+    && node --version \
+    && npm --version \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -16,12 +19,17 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
 
-# build.gradle 먼저 복사 (캐시 최적화)
+# build.gradle과 gradle.properties 복사 (캐시 최적화)
 COPY build.gradle .
 COPY settings.gradle .
+COPY gradle.properties .
 
 # 의존성 다운로드
 RUN ./gradlew dependencies --no-daemon
+
+# 프론트엔드 package.json 먼저 복사하여 npm 의존성 설치
+COPY src/main/resources/static/frontend/package*.json src/main/resources/static/frontend/
+RUN cd src/main/resources/static/frontend && npm install
 
 # 소스 코드 복사
 COPY src src
