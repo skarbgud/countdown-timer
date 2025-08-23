@@ -19,7 +19,7 @@
 - Spring Boot 3.2.0
 - Spring WebSocket
 - MyBatis
-- MySQL Database
+- PostgreSQL Database
 - Lombok
 
 ### 프론트엔드
@@ -109,7 +109,7 @@ docker-compose up -d
 docker-compose ps
 
 # 로그 확인
-docker-compose logs -f mysql-db
+docker-compose logs -f postgres-db
 docker-compose logs -f timer-app
 ```
 
@@ -120,11 +120,11 @@ docker-compose logs -f timer-app
 
 ## 🔧 개발 환경 설정
 
-### 1. 로컬 MySQL 데이터베이스 실행
+### 1. 로컬 PostgreSQL 데이터베이스 실행
 
 ```bash
-# MySQL만 시작 (개발용)
-docker-compose up -d mysql-db
+# PostgreSQL만 시작 (개발용)
+docker-compose up -d postgres-db
 ```
 
 ### 2. 백엔드 실행
@@ -159,14 +159,14 @@ React 앱은 3000 포트에서 시작됩니다.
 ### Local 환경 (기본값)
 - **프로파일**: `local`
 - **포트**: 8088
-- **데이터베이스**: localhost:3307:timer_db
+- **데이터베이스**: localhost:5432:timer_db
 - **로깅**: DEBUG 레벨
 - **커넥션 풀**: 최대 10개
 
 ### Docker 환경
 - **프로파일**: `docker`
 - **포트**: 8080
-- **데이터베이스**: mysql-db:3306:timer_db
+- **데이터베이스**: postgres-db:5432:timer_db
 - **로깅**: INFO 레벨, 파일 출력
 - **커넥션 풀**: 최대 20개
 
@@ -179,11 +179,11 @@ React 앱은 3000 포트에서 시작됩니다.
 
 ## 📊 Docker 서비스 구성
 
-### mysql-db
-- **이미지**: mysql:8.0
+### postgres-db
+- **이미지**: postgres:15
 - **데이터베이스**: timer_db
 - **사용자**: timer_user
-- **포트**: 3307 (외부), 3306 (내부)
+- **포트**: 5432 (외부), 5432 (내부)
 
 ### timer-app
 - **이미지**: 로컬 빌드
@@ -192,7 +192,7 @@ React 앱은 3000 포트에서 시작됩니다.
 
 ## 🗄️ 데이터베이스 스키마
 
-MySQL 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
+PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
 
 - `timer`: 타이머 기본 정보 (ID, 기준 시각, 소유자 세션 ID)
 - `timestamps`: 저장된 타임스탬프 정보 (ID, 타이머 ID, 캡처 시각, 남은 시간)
@@ -223,7 +223,7 @@ docker-compose logs -f mysql-db
 docker-compose logs -f timer-app
 
 # 컨테이너 내부 접속
-docker-compose exec mysql-db mysql -u timer_user -p timer_db
+docker-compose exec postgres-db psql -U timer_user -d timer_db
 
 # 볼륨 정리 (주의: 모든 데이터 삭제)
 docker-compose down -v
@@ -241,13 +241,13 @@ SPRING_PROFILES_ACTIVE=docker ./gradlew bootRun
 
 ## 🚨 문제 해결
 
-### MySQL 연결 문제
+### PostgreSQL 연결 문제
 - Docker 컨테이너가 완전히 시작되었는지 확인
-- 포트 3307이 올바르게 매핑되었는지 확인
+- 포트 5432가 올바르게 매핑되었는지 확인
 - 초기화 스크립트가 성공적으로 실행되었는지 확인
 
 ### 메모리 부족
-- MySQL은 최소 1GB RAM이 필요합니다
+- PostgreSQL은 최소 1GB RAM이 필요합니다
 - Docker Desktop의 메모리 할당을 확인하세요
 
 ### 빌드 실패

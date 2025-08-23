@@ -18,7 +18,7 @@ echo "🐳 Docker Compose로 서비스 시작 중..."
 docker-compose up -d
 
 echo "⏳ 서비스 시작 대기 중..."
-echo "   (MySQL 데이터베이스는 첫 시작 시 약 10-30초 소요될 수 있습니다)"
+echo "   (PostgreSQL 데이터베이스는 첫 시작 시 약 10-30초 소요될 수 있습니다)"
 
 # 서비스 상태 확인
 echo "📊 서비스 상태:"
@@ -26,11 +26,11 @@ docker-compose ps
 
 echo ""
 echo "📝 로그 확인:"
-echo "   MySQL DB: docker-compose logs -f mysql-db"
+echo "   PostgreSQL DB: docker-compose logs -f postgres-db"
 echo "   Spring App: docker-compose logs -f timer-app"
 echo ""
 echo "🛑 중지: docker-compose down"
 echo "🔄 재시작: docker-compose restart"
 echo ""
 echo "💡 애플리케이션이 http://localhost:8088 에서 실행됩니다."
-echo "   MySQL 데이터베이스: localhost:3307"
+echo "   PostgreSQL 데이터베이스: localhost:5432"

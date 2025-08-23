@@ -1,21 +1,20 @@
 version: '3.8'
 
 services:
-  mysql-db:
-    image: mysql:8.0
-    container_name: mysql-timer-db
+  postgres-db:
+    image: postgres:15
+    container_name: postgres-timer-db
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: timer_db
-      MYSQL_USER: timer_user
-      MYSQL_PASSWORD: timer_password123
+      POSTGRES_PASSWORD: timer_password123
+      POSTGRES_DB: timer_db
+      POSTGRES_USER: timer_user
     ports:
-      - "3307:3306"
+      - "5432:5432"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "timer_user", "-ptimer_password123"]
+      test: ["CMD-SHELL", "pg_isready -U timer_user -d timer_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,12 +23,12 @@ services:
     build: .
     container_name: timer-spring-app
     depends_on:
-      mysql-db:
+      postgres-db:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: mysql-db
-      DB_PORT: 3306
+      DB_HOST: postgres-db
+      DB_PORT: 5432
       DB_NAME: timer_db
       DB_USERNAME: timer_user
       DB_PASSWORD: timer_password123
@@ -39,4 +38,4 @@ services:
       - ./logs:/app/logs
 
 volumes:
-  mysql-data:
+  postgres-data:
