@@ -11,16 +11,11 @@ import com.timer.countdown.model.Timestamp;
 import com.timer.countdown.websocket.TimerWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import javax.swing.text.IconView;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -70,7 +65,7 @@ public class TimerService {
      */
     public TimerDto getTimer(String timerId, String sessionId) {
         Timer timer = timerMapper.selectTimerById(timerId);
-        if (timer == null) {
+        if (timer == null || timer.getOwnerId() == null) {
             throw new TimerNotFoundException(timerId);
         }
 
@@ -97,8 +92,8 @@ public class TimerService {
             throw new TimerNotFoundException(timerId);
         }
 
-        // Owner의 권한 검증
-        if (!timer.getOwnerId().equals(sessionId)) {
+        // Owner의 권한 검증 (null 안전성 추가)
+        if (timer.getOwnerId() == null || !timer.getOwnerId().equals(sessionId)) {
             log.warn("타이머 수정 권한 없음: {} (요청자: {}, Owner: {})", timerId, sessionId, timer.getOwnerId());
             throw new PermissionDeniedException();
         }
