@@ -119,17 +119,35 @@ public class TimerService {
      * @return
      */
     private TimerDto convertToDto(Timer timer, boolean isOnwer) {
+        // 타이머 만료 상태 확인 및 업데이트
+        Instant now = Instant.now();
+        boolean isExpired = now.isAfter(timer.getTargetTime());
+        
+        // 만료 상태가 변경되었다면 DB 업데이트
+        if (isExpired && !timer.isExpired()) {
+            timer.setExpired(true);
+            timer.setUpdatedAt(now);
+            timerMapper.updateTimer(timer);
+            
+            // WebSocket을 통해 타이머 만료 알림
+            timerWebSocketHandler.broadcastTimerExpired(timer.getTimerId());
+            
+            log.info("타이머 만료 처리: {}", timer.getTimerId());
+        }
+        
         // 해당 타이머의 타임스탬프들을 조회
         List<Timestamp> timestamps = timestampMapper.selectTimestampsByTimerId(timer.getTimerId());
 
         return TimerDto.builder()
                 .timerId(timer.getTimerId())
                 .targetTime(timer.getTargetTime())
-                .serverTime(Instant.now()) // 현재 서버 시간
+                .serverTime(now) // 현재 서버 시간
                 .isOwner(isOnwer)
+                .isExpired(isExpired)
                 .timestamps(
                         timestamps.stream()
                                 .map(ts -> TimestampDto.builder()
+                                        .id(ts.getId())
                                         .remainingTime(ts.getRemainingTime())
                                         .capturedTime(ts.getCapturedTime())
                                         .build()
@@ -176,6 +194,7 @@ public class TimerService {
 
         // Websocket을 통해 모든 클라이언트에게 새 타임스탬프 알림
         TimestampDto timestampDto = TimestampDto.builder()
+                .id(timestamp.getId())
                 .remainingTime(remainingTime)
                 .capturedTime(currentTime)
                 .build();
@@ -190,8 +209,7 @@ public class TimerService {
      * @return
      */
     public String generateShareUrl(String timerId) {
-        String baseUrl = "http://localhost:3000"; // @Value로 주입해서 환경별로 관리해야함
-        return baseUrl + "/timer/" + timerId;
+        return "/timer/" + timerId;
     }
 
 }
