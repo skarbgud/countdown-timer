@@ -12,8 +12,8 @@ import java.time.Instant;
 @AllArgsConstructor
 public class Timestamp {
     private Long id;
-    private String timerId;
-    private Instant capturedAt;
-    private Long remainingTimeMs;        // 밀리초 단위 남은 시간
-    private String remainingTimeFormatted; // 포맷된 남은 시간 (HH:mm:ss)
+    private String timerId;             //연결될 타이머 ID
+    private String remainingTime;       //저장 시점의 남은 시간
+    private Instant currentTime;        //저장된 현재 시각
+    private Instant createdAt;          //생성 시각
 }

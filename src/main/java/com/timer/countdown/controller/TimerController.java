@@ -4,8 +4,6 @@ import com.timer.countdown.dto.ResponseDto;
 import com.timer.countdown.dto.TimerDto;
 import com.timer.countdown.dto.TimerRequestDto;
 import com.timer.countdown.dto.TimestampDto;
-import com.timer.countdown.exception.PermissionDeniedException;
-import com.timer.countdown.exception.TimerNotFoundException;
 import com.timer.countdown.service.TimerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -58,8 +56,7 @@ public class TimerController {
         HttpSession session = request.getSession(true);
 
         // 타이머 조회 시 세션 ID로 Owner 여부 판단
-        TimerDto timerDto = timerService.getTimer(timerId, session.getId())
-                .orElseThrow(() -> new TimerNotFoundException(timerId));
+        TimerDto timerDto = timerService.getTimer(timerId, session.getId());
 
         return ResponseEntity.ok(ResponseDto.success(timerDto, "타이머 조회가 완료되었습니다."));
     }
@@ -83,9 +80,7 @@ public class TimerController {
         HttpSession session = request.getSession(true);
         Instant newTargetTime = Instant.parse(payload.get("targetTime"));
 
-        // Owner가 아니면 PermissionDeniedException 발생
-        TimerDto timerDto = timerService.updateTargetTime(timerId, newTargetTime, session.getId())
-                .orElseThrow(() -> new PermissionDeniedException());
+        TimerDto timerDto = timerService.updateTargetTime(timerId, newTargetTime, session.getId());
 
         return ResponseEntity.ok(ResponseDto.success(timerDto, "기준 시각이 업데이트되었습니다."));
     }
@@ -106,9 +101,7 @@ public class TimerController {
     ) {
         String remainingTime = payload.get("remainingTime");
 
-        // 타이머가 존재하지 않거나 만료되었으면 예외 발생
-        TimestampDto timestampDto = timerService.saveTimestamp(timerId, remainingTime)
-                .orElseThrow(() -> new TimerNotFoundException(timerId));
+        TimestampDto timestampDto = timerService.saveTimestamp(timerId, remainingTime);
 
         return ResponseEntity.ok(ResponseDto.success(timestampDto, "타임스탬프가 저장되었습니다."));
     }
