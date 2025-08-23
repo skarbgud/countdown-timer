@@ -2,6 +2,7 @@ package com.timer.countdown.service;
 
 import com.timer.countdown.dto.TimerDto;
 import com.timer.countdown.dto.TimestampDto;
+import com.timer.countdown.exception.ExpriedTimerException;
 import com.timer.countdown.exception.PermissionDeniedException;
 import com.timer.countdown.exception.TimerNotFoundException;
 import com.timer.countdown.mapper.TimerMapper;
@@ -150,6 +151,7 @@ public class TimerService {
                                         .id(ts.getId())
                                         .remainingTime(ts.getRemainingTime())
                                         .capturedTime(ts.getCapturedTime())
+                                        .createdAt(ts.getCreatedAt())
                                         .build()
                                 ).toList())
                 .build();
@@ -176,7 +178,7 @@ public class TimerService {
         // 타이머 만료 체크
         if (timer.isExpired() || Instant.now().isAfter(timer.getTargetTime())) {
             log.warn("만료된 타이머에 타임스탬프 저장 시도:{}", timer);
-            throw new IllegalArgumentException("만료된 타이머에는 타임스탬프를 저장할 수 없습니다.");
+            throw new ExpriedTimerException(timer);
         }
 
         Instant currentTime = Instant.now();
@@ -197,6 +199,7 @@ public class TimerService {
                 .id(timestamp.getId())
                 .remainingTime(remainingTime)
                 .capturedTime(currentTime)
+                .createdAt(currentTime)
                 .build();
 
         timerWebSocketHandler.broadcastTimestampAdded(timerId, timestampDto);

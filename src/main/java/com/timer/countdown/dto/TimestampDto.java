@@ -13,8 +13,10 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TimestampDto {
-    private Long id;                    //타임스탬프 ID
-    private String remainingTime;   //저장 시점의 남은 시간
+    private Long id;
+    private String remainingTime;       //저장 시점의 남은 시간
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
-    private Instant capturedTime;    //저장된 현재 시각(UTC)
+    private Instant capturedTime;       //저장된 현재 시각
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
+    private Instant createdAt;          //생성 시각
 }

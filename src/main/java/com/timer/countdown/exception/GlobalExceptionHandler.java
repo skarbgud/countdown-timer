@@ -32,6 +32,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(ResponseDto.failure("유효한 날짜/시간 형식이 아닙니다."), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(ExpriedTimerException.class)
+    public ResponseEntity<ResponseDto<Void>> handleExpriedTimerException(ExpriedTimerException e) {
+        logger.error("만료된 타이머에 타임스탬프 저장하여 실패하였습니다.: {}", e.getMessage());
+        return new ResponseEntity<>(ResponseDto.failure(e.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResponseDto<Void>> handleGenericException(Exception e) {
         logger.error("예상치 못한 오류 발생: {}", e.getMessage(), e);
