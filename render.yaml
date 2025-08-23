@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: countdown-timer-app
+    env: docker
+    plan: free
+    buildCommand: docker build -f Dockerfile.render -t countdown-timer .
+    startCommand: docker run -p 8080:8080 countdown-timer
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: 8080
+    autoDeploy: true
+    healthCheckPath: /
+    numInstances: 1
+
+databases:
+  - name: countdown-timer-db
+    databaseName: countdown_timer_db
+    user: countdown_timer_user
+    plan: free

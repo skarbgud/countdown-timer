@@ -1,0 +1,36 @@
+# Multi-stage build for Render deployment
+FROM node:18-alpine AS frontend-build
+
+WORKDIR /app/frontend
+COPY src/main/resources/static/frontend/package*.json ./
+RUN npm ci --only=production
+
+COPY src/main/resources/static/frontend/ ./
+RUN npm run build
+
+# Java build stage
+FROM gradle:8.5-jdk17 AS java-build
+
+WORKDIR /app
+COPY . .
+RUN gradle build -x test
+
+# Final runtime stage
+FROM openjdk:17-jre-slim
+
+WORKDIR /app
+
+# Copy the built JAR file
+COPY --from=java-build /app/build/libs/countdown-timer.jar ./app.jar
+
+# Copy frontend build files
+COPY --from=frontend-build /app/frontend/build ./static
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Expose port
+EXPOSE 8080
+
+# Run the application
+CMD ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
