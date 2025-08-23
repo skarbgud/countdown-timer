@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Data
 @Builder
@@ -21,16 +20,4 @@ public class Timer {
     private Instant createdAt;      //생성일
     private Instant updatedAt;      //수정일
     private List<Timestamp> timestamps = new ArrayList<>();
-    
-    public void generateId() {
-        if (timerId == null) {
-            timerId = UUID.randomUUID().toString();
-        }
-    }
-    
-    public void setCreatedAt() {
-        if (createdAt == null) {
-            createdAt = Instant.now();
-        }
-    }
 }
