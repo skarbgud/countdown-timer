@@ -327,7 +327,7 @@ const TimerPage = () => {
     const updateTargetTime = async () => {
     setIsUpdating(true);
     try {
-      const response = await fetch(`http://localhost:8088/api/timers/${timerId}/target-time`, {
+      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/target-time`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -406,7 +406,7 @@ const TimerPage = () => {
         }
       }
       
-      const response = await fetch(`http://localhost:8088/api/timers/${timerId}/timestamps`, {
+      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/timestamps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -451,7 +451,7 @@ const TimerPage = () => {
 
   const generateShareLink = async () => {
     try {
-      const response = await fetch(`http://localhost:8088/api/timers/${timerId}/share`);
+      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/share`);
       
       // HTTP 상태 코드 체크
       if (!response.ok) {
