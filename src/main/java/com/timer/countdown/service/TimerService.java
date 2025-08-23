@@ -94,7 +94,7 @@ public class TimerService {
         Timer timer = timerMapper.selectTimerById(timerId);
 
         if (timer == null) {
-            throw new TimerNotFoundException(sessionId);
+            throw new TimerNotFoundException(timerId);
         }
 
         // Owner의 권한 검증
