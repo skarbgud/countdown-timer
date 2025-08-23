@@ -12,13 +12,6 @@ java {
     targetCompatibility = '17'
 }
 
-// Gradle JVM 버전 설정
-gradle.projectsEvaluated {
-    tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-    }
-}
-
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -36,7 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // MyBatis
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
 
     // PostgreSQL JDBC Driver
     runtimeOnly 'org.postgresql:postgresql:42.7.1'
@@ -48,7 +41,7 @@ dependencies {
 
     // Test Dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.3'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.4'
 }
 
 tasks.named('test') {
@@ -62,11 +55,9 @@ jar {
 
 bootJar {
     archiveFileName = 'countdown-timer.jar'
-    // JAR 파일 압축 옵션 추가
     archiveVersion = ''
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    // 메타데이터 최적화
     manifest {
         attributes(
             'Implementation-Title': project.name,
@@ -76,36 +67,50 @@ bootJar {
     }
 }
 
-// 프론트엔드 빌드 태스크
-task frontendBuild(type: Exec) {
-    workingDir 'src/main/resources/static/frontend'
-    commandLine 'npm', 'run', 'build'
+if (!project.hasProperty('intellij')) {
+    // 프론트엔드 빌드 태스크
+    task frontendBuild(type: Exec) {
+        workingDir 'src/main/resources/static/frontend'
+        commandLine 'npm', 'run', 'build'
 
-    // npm이 설치되어 있는지 확인
-    onlyIf {
-        file('src/main/resources/static/frontend/package.json').exists()
+        // npm이 설치되어 있는지 확인
+        onlyIf {
+            file('src/main/resources/static/frontend/package.json').exists()
+        }
+        
+        // 빌드 실패 시에도 계속 진행 (선택사항)
+        ignoreExitValue = false
     }
-}
 
-// 프론트엔드 빌드 결과를 정적 디렉토리로 복사
-task copyFrontendBuild(type: Copy, dependsOn: frontendBuild) {
-    from 'src/main/resources/static/frontend/build'
-    into 'src/main/resources/static'
+    // 프론트엔드 빌드 결과를 정적 디렉토리로 복사
+    task copyFrontendBuild(type: Copy, dependsOn: frontendBuild) {
+        from 'src/main/resources/static/frontend/build'
+        into 'src/main/resources/static'
 
-    // 기존 정적 파일들 제거 (build 디렉토리 제외)
-    doFirst {
-        delete fileTree('src/main/resources/static') {
-            exclude 'frontend/**'
-            exclude 'build/**'
+        // 기존 정적 파일들 제거 (frontend 디렉토리 제외)
+        doFirst {
+            delete fileTree('src/main/resources/static') {
+                exclude 'frontend/**'
+            }
+        }
+        
+        // 빌드 디렉토리가 존재하는지 확인
+        onlyIf {
+            file('src/main/resources/static/frontend/build').exists()
         }
     }
+
+    // processResources가 copyFrontendBuild에 의존하도록 설정
+    processResources.dependsOn copyFrontendBuild
+
+    processResources {
+        exclude 'static/frontend/**'
+    }
 }
 
-// processResources 태스크가 프론트엔드 빌드에 의존하도록 설정
-processResources.dependsOn copyFrontendBuild
-
-// 빌드 최적화
+// Java 컴파일 최적화 설정
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
     options.incremental = true
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
