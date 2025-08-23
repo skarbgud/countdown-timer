@@ -70,6 +70,8 @@ const TimerPage = () => {
         const timerData = result.data;
         console.log("==timerData===")
         console.log(timerData)
+        console.log("owner:", timerData.owner)
+        console.log("expired:", timerData.expired)
         setTimer(timerData);
         
         // 서버 시간 설정
@@ -452,6 +454,7 @@ const TimerPage = () => {
           </Box>
 
           {/* 목표 시간 수정 */}
+          {console.log("렌더링 조건 확인2:", { owner: timer?.owner, expired: timer?.expired, timer })}
           {timer.isOwner && !timer.isExpired && (
             <Card>
               <CardBody>
@@ -460,8 +463,7 @@ const TimerPage = () => {
                   <IconButton
                     icon={isEditing ? <CloseIcon /> : <EditIcon />}
                     onClick={() => setIsEditing(!isEditing)}
-                    colorScheme="brand"
-                    variant="ghost"
+                    colorScheme="red"
                     aria-label={isEditing ? "수정 취소" : "목표 시간 수정"}
                   />
                 </HStack>
@@ -477,7 +479,7 @@ const TimerPage = () => {
                       />
                       <Button
                         onClick={updateTargetTime}
-                        colorScheme="brand"
+                        colorScheme="pink"
                         isLoading={isUpdating}
                         loadingText="수정 중..."
                       >
@@ -508,7 +510,7 @@ const TimerPage = () => {
                 
                 <Stat textAlign="center">
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
-                  {timer && !timer.isExpired ? (
+                  {timer && !timer.expired ? (
                     <Countdown
                       date={new Date(timer.targetTime)}
                       renderer={({ hours, minutes, seconds, completed }) => {
@@ -547,7 +549,7 @@ const TimerPage = () => {
                     </StatNumber>
                   )}
                   <StatHelpText>
-                    {timer.isExpired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
+                    {timer.expired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
                   </StatHelpText>
                 </Stat>
               </VStack>
@@ -560,7 +562,7 @@ const TimerPage = () => {
               <HStack spacing={4} justify="center" flexWrap="wrap">
                 <Button
                   onClick={saveTimestamp}
-                  disabled={timer.isExpired}
+                  disabled={timer.expired}
                   colorScheme="purple"
                   size="lg"
                   isLoading={isSaving}
