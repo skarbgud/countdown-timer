@@ -43,7 +43,7 @@ public class WebConfig implements WebMvcConfigurer {
                         }
                         
                         // SPA 라우팅: 모든 경로를 index.html로 리다이렉트
-                        return new ClassPathResource("/static/index.html");
+                        return new ClassPathResource("static/index.html");
                     }
                 });
     }
