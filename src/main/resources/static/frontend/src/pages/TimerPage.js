@@ -28,7 +28,7 @@ import {
   StatNumber,
   StatHelpText,
 } from '@chakra-ui/react';
-import { CopyIcon, EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
+import { CopyIcon, EditIcon, CheckIcon, CloseIcon, TimeIcon } from '@chakra-ui/icons';
 
 const TimerPage = () => {
   const { timerId } = useParams();
@@ -434,10 +434,11 @@ const TimerPage = () => {
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
                   <StatNumber 
                     fontSize="6xl" 
-                    color={timer.isExpired ? 'red.500' : 'brand.500'}
+                    color={timer.isExpired ? 'red.500' : 'blue.500'}
                     fontWeight="bold"
                   >
-                    ⏳ {remainingTime}
+                    <TimeIcon boxSize={8} mr={2} />
+                    {remainingTime}
                   </StatNumber>
                   <StatHelpText>
                     {timer.isExpired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
@@ -518,8 +519,9 @@ const TimerPage = () => {
                     >
                       <HStack justify="space-between">
                         <HStack>
-                          <Badge colorScheme="brand" variant="subtle">
-                            ⏳ {ts.remainingTime}
+                          <Badge colorScheme="blue" variant="subtle">
+                            <TimeIcon boxSize={3} mr={1} />
+                            {ts.remainingTime}
                           </Badge>
                           <Text fontSize="sm" color="gray.600">
                             {new Date(ts.capturedTime).toLocaleString()}
