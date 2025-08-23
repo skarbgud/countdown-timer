@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 public interface TimerMapper {
     void insertTimer(Timer timer);
 
-    Timer selectTimerById(@Param("timer") String timerId);
+    Timer selectTimerById(@Param("timerId") String timerId);
 
     void updateTimer(Timer timer);
 }
