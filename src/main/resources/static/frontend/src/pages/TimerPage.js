@@ -52,6 +52,43 @@ const TimerPage = () => {
   const toast = useToast();
   const { hasCopied, onCopy } = useClipboard(shareUrl);
 
+  const CountdownDisplay = ({ targetTime, expired }) => {
+    if (expired) {
+      return (
+        <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
+          ⏰ 시간 종료!
+        </StatNumber>
+      );
+    }
+
+    return (
+      <Countdown
+        date={new Date(targetTime)}
+        renderer={({ days, hours, minutes, seconds, completed }) => {
+          if (completed) {
+            return (
+              <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
+                ⏰ 시간 종료!
+              </StatNumber>
+            );
+          }
+          
+          const totalHours = days * 24 + hours;
+          
+          return (
+            <StatNumber 
+              fontSize="6xl" 
+              color="blue.500"
+              fontWeight="bold"
+            >
+              ⏳ {totalHours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+            </StatNumber>
+          );
+        }}
+      />
+    );
+  };
+
   // 타이머 로드 함수를 useCallback으로 메모이제이션
   const loadTimer = useCallback(async () => {
     try {
@@ -114,6 +151,38 @@ const TimerPage = () => {
     }
   }, [timerId, toast]);
 
+
+
+  // 타이머 만료 체크
+  useEffect(() => {
+    if (!timer) return;
+
+    const checkExpiration = () => {
+      const now = new Date().getTime();
+      const target = new Date(timer.targetTime).getTime();
+      
+      if (now >= target && !timer.expired) {
+        // 타이머 만료 처리
+        toast({
+          title: '시간 종료!',
+          description: '설정된 시간이 다 되었습니다!',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+          position: 'top-left',
+        });
+        
+        // 타이머 상태 업데이트
+        setTimer(prev => ({ ...prev, expired: true }));
+      }
+    };
+
+    checkExpiration();
+    const interval = setInterval(checkExpiration, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer, toast]);
+
   // WebSocket 연결 함수를 useCallback으로 메모이제이션
   const connectWebSocket = useCallback(() => {
     try {
@@ -133,6 +202,9 @@ const TimerPage = () => {
       
       wsRef.current.onopen = () => {
         console.log('WebSocket 연결됨 - readyState:', wsRef.current.readyState);
+        console.log('WebSocket URL:', wsRef.current.url);
+        console.log('현재 도메인:', window.location.hostname);
+        
         // 연결 성공 시 재연결 시도 횟수 리셋
         reconnectAttemptsRef.current = 0;
         
@@ -143,6 +215,7 @@ const TimerPage = () => {
         console.log('타이머 방 참가 메시지 전송:', joinMessage);
         
         wsRef.current.send(JSON.stringify(joinMessage));
+        console.log('타이머 방 참가 메시지 전송 완료');
       };
 
       wsRef.current.onmessage = (event) => {
@@ -236,9 +309,22 @@ const TimerPage = () => {
         if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
           console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}...`);
+          
+          // Render 환경에서는 더 빠른 재연결 시도
+          const reconnectDelay = window.location.hostname !== 'localhost' ? 1000 : 3000;
           setTimeout(() => {
             connectWebSocket();
-          }, 3000);
+          }, reconnectDelay);
+        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+          console.error('WebSocket 최대 재연결 시도 횟수 초과. 수동 새로고침이 필요합니다.');
+          toast({
+            title: '연결 오류',
+            description: 'WebSocket 연결이 끊어졌습니다. 페이지를 새로고침해주세요.',
+            status: 'error',
+            duration: 10000,
+            isClosable: true,
+            position: 'top-left',
+          });
         }
       };
     } catch (error) {
@@ -345,6 +431,10 @@ const TimerPage = () => {
       const result = await response.json();
       
       if (result.success) {
+        console.log('목표 시간 업데이트 API 응답:', result);
+        console.log('업데이트된 타이머 데이터:', result.data);
+        console.log('새로운 targetTime:', result.data.targetTime);
+        
         // 새로운 타이머 정보로 상태 업데이트
         const timerData = result.data;
         setTimer(timerData);
@@ -358,6 +448,7 @@ const TimerPage = () => {
           const localTime = new Date();
           const offset = localTime.getTime() - serverTimeObj.getTime();
           setServerTimeOffset(offset);
+          console.log('서버 시간 업데이트됨:', serverTimeObj, '오프셋:', offset);
         }
         
         setIsEditing(false);
@@ -610,47 +701,9 @@ const TimerPage = () => {
                 
                 <Stat textAlign="center">
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
-                  {timer && !timer.expired ? (
-                    <Countdown
-                      key={timerUpdateKey} // key를 통해 강제 리렌더링
-                      date={new Date(timer.targetTime)}
-                      renderer={({ hours, minutes, seconds, completed }) => {
-                        if (completed) {
-                          return (
-                            <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
-                              ⏰ 시간 종료!
-                            </StatNumber>
-                          );
-                        }
-                        return (
-                          <StatNumber 
-                            fontSize="6xl" 
-                            color="blue.500"
-                            fontWeight="bold"
-                          >
-                            ⏳ {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-                          </StatNumber>
-                        );
-                      }}
-                      onComplete={() => {
-                        // 타이머 완료 시 처리
-                        toast({
-                          title: '시간 종료!',
-                          description: '설정된 시간이 다 되었습니다!',
-                          status: 'warning',
-                          duration: 5000,
-                          isClosable: true,
-                          position: 'top-left',
-                        });
-                      }}
-                    />
-                  ) : (
-                    <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
-                      ⏰ 시간 종료!
-                    </StatNumber>
-                  )}
+                  <CountdownDisplay targetTime={timer?.targetTime} expired={timer?.expired} />
                   <StatHelpText>
-                    {timer.expired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
+                    {timer?.expired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
                   </StatHelpText>
                 </Stat>
               </VStack>
