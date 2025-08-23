@@ -13,15 +13,18 @@ FROM gradle:8.5-jdk17 AS java-build
 
 WORKDIR /app
 COPY . .
-RUN gradle build -x test
+RUN gradle build -x test --no-daemon
 
 # Final runtime stage
 FROM openjdk:17-jre-slim
 
 WORKDIR /app
 
-# Copy the built JAR file
-COPY --from=java-build /app/build/libs/countdown-timer.jar ./app.jar
+# JVM 메모리 및 ZIP 처리 옵션 설정
+ENV JAVA_OPTS="-Xmx512m -Xms256m -Djdk.util.zip.disableZip64ExtraFieldValidation=true"
+
+# Copy the built JAR file (정확한 경로 확인)
+COPY --from=java-build /app/build/libs/*.jar ./app.jar
 
 # Copy frontend build files
 COPY --from=frontend-build /app/frontend/build ./static
@@ -32,5 +35,5 @@ RUN mkdir -p /app/logs
 # Expose port
 EXPOSE 8080
 
-# Run the application
-CMD ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
+# Run the application with memory and zip options
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar --spring.profiles.active=prod"]

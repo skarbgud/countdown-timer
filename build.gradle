@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.0'
+    id 'org.springframework.boot' version '3.2.11'
     id 'io.spring.dependency-management' version '1.1.4'
 }
 
@@ -34,18 +34,18 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    
+
     // MyBatis
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
-    
+
     // PostgreSQL JDBC Driver
     runtimeOnly 'org.postgresql:postgresql:42.7.1'
-    
+
     // Development Tools
     compileOnly 'org.projectlombok:lombok:1.18.34'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.projectlombok:lombok:1.18.34'
-    
+
     // Test Dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.3'
@@ -62,13 +62,25 @@ jar {
 
 bootJar {
     archiveFileName = 'countdown-timer.jar'
+    // JAR 파일 압축 옵션 추가
+    archiveVersion = ''
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // 메타데이터 최적화
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Main-Class': 'org.springframework.boot.loader.launch.JarLauncher'
+        )
+    }
 }
 
 // 프론트엔드 빌드 태스크
 task frontendBuild(type: Exec) {
     workingDir 'src/main/resources/static/frontend'
     commandLine 'npm', 'run', 'build'
-    
+
     // npm이 설치되어 있는지 확인
     onlyIf {
         file('src/main/resources/static/frontend/package.json').exists()
@@ -79,7 +91,7 @@ task frontendBuild(type: Exec) {
 task copyFrontendBuild(type: Copy, dependsOn: frontendBuild) {
     from 'src/main/resources/static/frontend/build'
     into 'src/main/resources/static'
-    
+
     // 기존 정적 파일들 제거 (build 디렉토리 제외)
     doFirst {
         delete fileTree('src/main/resources/static') {
@@ -91,3 +103,9 @@ task copyFrontendBuild(type: Copy, dependsOn: frontendBuild) {
 
 // processResources 태스크가 프론트엔드 빌드에 의존하도록 설정
 processResources.dependsOn copyFrontendBuild
+
+// 빌드 최적화
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.incremental = true
+}
