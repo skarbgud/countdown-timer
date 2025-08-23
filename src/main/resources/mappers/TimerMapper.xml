@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.timer.countdown.mapper.TimerMapper">
     <insert id="insertTimer" parameterType="com.timer.countdown.model.Timer">
-        INSERT INTO timers (
+        INSERT INTO TIMER (
             TIMER_ID
           , TARGET_TIME
           , OWNER_ID
@@ -24,7 +24,7 @@
                 T.TIMER_ID
               , T.TARGET_TIME
               , T.OWNER_ID
-              , T.IS_EXPRIED
+              , T.IS_EXPIRED
               , T.CREATED_AT
               , T.UPDATED_AT
         FROM    TIMER T
@@ -34,7 +34,7 @@
     <update id="updateTimer" parameterType="com.timer.countdown.model.Timer">
         UPDATE TIMER T
         SET    T.TARGET_TIME = #{targetTime}
-             , T.IS_EXPRIED  = #{isExpired}
+             , T.IS_EXPIRED  = #{isExpired}
              , T.UPDATED_AT  = #{updatedAt}
         WHERE  T.TIMER_ID    = #{timerId}
     </update>

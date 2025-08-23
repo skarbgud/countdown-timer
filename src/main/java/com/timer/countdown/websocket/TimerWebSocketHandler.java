@@ -201,7 +201,7 @@ public class TimerWebSocketHandler implements WebSocketHandler {
                 "timerId", timerId,
                 "timestamp", Map.of(
                         "remainingTime", timestampDto.getRemainingTime(),
-                        "currentTime", timestampDto.getCurrentTime().toString()
+                        "capturedTime", timestampDto.getCapturedTime().toString()
                 ),
                 "serverTime", Instant.now().toString()
         );

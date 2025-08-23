@@ -14,6 +14,6 @@ public class Timestamp {
     private Long id;
     private String timerId;             //연결될 타이머 ID
     private String remainingTime;       //저장 시점의 남은 시간
-    private Instant currentTime;        //저장된 현재 시각
+    private Instant capturedTime;       //저장된 현재 시각
     private Instant createdAt;          //생성 시각
 }

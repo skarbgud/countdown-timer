@@ -136,7 +136,7 @@ public class TimerService {
                         timestamps.stream()
                                 .map(ts -> TimestampDto.builder()
                                         .remainingTime(ts.getRemainingTime())
-                                        .currentTime(ts.getCurrentTime())
+                                        .capturedTime(ts.getCapturedTime())
                                         .build()
                                 ).toList())
                 .build();
@@ -171,7 +171,7 @@ public class TimerService {
         Timestamp timestamp = Timestamp.builder()
                 .timerId(timerId)
                 .remainingTime(remainingTime)
-                .currentTime(currentTime)
+                .capturedTime(currentTime)
                 .createdAt(currentTime)
                 .build();
 
@@ -182,7 +182,7 @@ public class TimerService {
         // Websocket을 통해 모든 클라이언트에게 새 타임스탬프 알림
         TimestampDto timestampDto = TimestampDto.builder()
                 .remainingTime(remainingTime)
-                .currentTime(currentTime)
+                .capturedTime(currentTime)
                 .build();
 
         timerWebSocketHandler.broadcastTimestampAdded(timerId, timestampDto);

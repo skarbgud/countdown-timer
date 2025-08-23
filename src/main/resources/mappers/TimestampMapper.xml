@@ -6,12 +6,12 @@
         INSERT INTO TIMESTAMP (
             TIMER_ID
           , REMAINING_TIME
-          , CURRENT_TIME
+          , CAPTURED_TIME
           , CREATED_AT
         ) VALUES (
             #{timerId},
             #{remainingTime},
-            #{currentTime},
+            #{capturedTime},
             #{createdAt}
         )
     </insert>
@@ -21,10 +21,10 @@
                 TS.ID
               , TS.TIMER_ID
               , TS.REMAINING_TIME
-              , TS.CURRENT_TIME
+              , TS.CAPTURED_TIME
               , TS.CREATED_AT
         FROM    TIMESTAMP TS
         WHERE   TS.TIMER_ID = #{timerId}
-        ORDER BY TS.CURRENT_TIME ASC
+        ORDER BY TS.CAPTURED_TIME ASC
     </select>
 </mapper>

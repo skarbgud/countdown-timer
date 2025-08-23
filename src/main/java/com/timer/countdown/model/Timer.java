@@ -17,9 +17,9 @@ public class Timer {
     private String timerId;         //타이머의 ID
     private Instant targetTime;     //타이머의 원하는 시간
     private String ownerId;         //타이머의 소유자
+    private boolean isExpired;      //만료여부
     private Instant createdAt;      //생성일
     private Instant updatedAt;      //수정일
-    private boolean isExpired;      //만료여부
     private List<Timestamp> timestamps = new ArrayList<>();
     
     public void generateId() {
