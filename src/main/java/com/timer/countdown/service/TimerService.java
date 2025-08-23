@@ -92,7 +92,7 @@ public class TimerService {
             throw new TimerNotFoundException(timerId);
         }
 
-        // Owner의 권한 검증 (null 안전성 추가)
+        // Owner의 권한 검증
         if (timer.getOwnerId() == null || !timer.getOwnerId().equals(sessionId)) {
             log.warn("타이머 수정 권한 없음: {} (요청자: {}, Owner: {})", timerId, sessionId, timer.getOwnerId());
             throw new PermissionDeniedException();
