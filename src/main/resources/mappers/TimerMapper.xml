@@ -1,36 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.timer.countdown.mapper.TimerMapper">
-    <resultMap id="timerResultMap" type="com.timer.countdown.model.Timer">
-        <id property="id" column="id"/>
-        <result property="targetTime" column="target_time"/>
-        <result property="ownerSessionId" column="owner_session_id"/>
-        <result property="createdAt" column="created_at"/>
-        <collection property="timestamps" ofType="com.timer.countdown.model.Timestamp">
-            <id property="id" column="timestamp_id"/>
-            <result property="timerId" column="timer_id"/>
-            <result property="capturedAt" column="captured_at"/>
-            <result property="remainingTimeMs" column="remaining_time_ms"/>
-            <result property="remainingTimeFormatted" column="remaining_time_formatted"/>
-        </collection>
-    </resultMap>
-    
     <insert id="insertTimer" parameterType="com.timer.countdown.model.Timer">
-        INSERT INTO timer (id, target_time, owner_session_id, created_at)
-        VALUES (#{id}, #{targetTime}, #{ownerSessionId}, #{createdAt})
+        INSERT INTO timers (
+            TIMER_ID
+          , TARGET_TIME
+          , OWNER_ID
+          , IS_EXPIRED
+          , CREATED_AT
+          , UPDATED_AT
+        ) VALUES (
+            #{timerId},
+            #{targetTime},
+            #{ownerId},
+            #{isExpired},
+            #{createdAt},
+            #{createdAt}
+        )
     </insert>
     
-    <select id="selectTimerById" parameterType="string" resultMap="timerResultMap">
-        SELECT t.id, t.target_time, t.owner_session_id, t.created_at,
-               ts.id as timestamp_id, ts.timer_id, ts.captured_at, ts.remaining_time_ms, ts.remaining_time_formatted
-        FROM timer t
-        LEFT JOIN timestamps ts ON t.id = ts.timer_id
-        WHERE t.id = #{id}
+    <select id="selectTimerById" parameterType="string" resultType="com.timer.countdown.model.Timer">
+        SELECT
+                T.TIMER_ID
+              , T.TARGET_TIME
+              , T.OWNER_ID
+              , T.IS_EXPRIED
+              , T.CREATED_AT
+              , T.UPDATED_AT
+        FROM    TIMER T
+        WHERE   T.TIMER_ID = #{timerId}
     </select>
     
-    <update id="updateTargetTime">
-        UPDATE timer
-        SET target_time = #{targetTime}
-        WHERE id = #{id}
+    <update id="updateTimer" parameterType="com.timer.countdown.model.Timer">
+        UPDATE TIMER T
+        SET    T.TARGET_TIME = #{targetTime}
+             , T.IS_EXPRIED  = #{isExpired}
+             , T.UPDATED_AT  = #{updatedAt}
+        WHERE  T.TIMER_ID    = #{timerId}
     </update>
 </mapper>

@@ -1,27 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.timer.countdown.mapper.TimestampMapper">
-    <resultMap id="timestampResultMap" type="com.timer.countdown.model.Timestamp">
-        <id property="id" column="id"/>
-        <result property="timerId" column="timer_id"/>
-        <result property="capturedAt" column="captured_at"/>
-        <result property="remainingTimeMs" column="remaining_time_ms"/>
-        <result property="remainingTimeFormatted" column="remaining_time_formatted"/>
-    </resultMap>
-    
-    <select id="selectNextTimestampId" resultType="long">
-        SELECT LAST_INSERT_ID()
-    </select>
-    
-    <insert id="insertTimestamp" parameterType="com.timer.countdown.model.Timestamp" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO timestamps (timer_id, captured_at, remaining_time_ms, remaining_time_formatted)
-        VALUES (#{timerId}, #{capturedAt}, #{remainingTimeMs}, #{remainingTimeFormatted})
+
+    <insert id="insertTimestamp" parameterType="com.timer.countdown.model.Timestamp">
+        INSERT INTO TIMESTAMP (
+            TIMER_ID
+          , REMAINING_TIME
+          , CURRENT_TIME
+          , CREATED_AT
+        ) VALUES (
+            #{timerId},
+            #{remainingTime},
+            #{currentTime},
+            #{createdAt}
+        )
     </insert>
     
-    <select id="selectTimestampsByTimerId" parameterType="string" resultMap="timestampResultMap">
-        SELECT id, timer_id, captured_at, remaining_time_ms, remaining_time_formatted
-        FROM timestamps
-        WHERE timer_id = #{timerId}
-        ORDER BY captured_at ASC
+    <select id="selectTimestampsByTimerId" parameterType="string" resultType="com.timer.countdown.model.Timestamp">
+        SELECT
+                TS.ID
+              , TS.TIMER_ID
+              , TS.REMAINING_TIME
+              , TS.CURRENT_TIME
+              , TS.CREATED_AT
+        FROM    TIMESTAMP TS
+        WHERE   TS.TIMER_ID = #{timerId}
+        ORDER BY TS.CURRENT_TIME ASC
     </select>
 </mapper>
