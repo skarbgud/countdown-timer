@@ -111,6 +111,7 @@ const TimerPage = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
+          position: 'top-left',
         });
       }
     } catch (error) {
@@ -121,6 +122,7 @@ const TimerPage = () => {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        position: 'top-left',
       });
     } finally {
       setLoading(false);
@@ -147,6 +149,7 @@ const TimerPage = () => {
           status: 'warning',
           duration: 5000,
           isClosable: true,
+          position: 'top-left',
         });
       }
     }, 1000);
@@ -210,6 +213,7 @@ const TimerPage = () => {
             status: 'info',
             duration: 3000,
             isClosable: true,
+            position: 'top-left',
           });
         } else if (message.type === 'timestampAdded') {
           loadTimer();
@@ -223,6 +227,7 @@ const TimerPage = () => {
             status: 'warning',
             duration: 5000,
             isClosable: true,
+            position: 'top-left',
           });
         }
       };
@@ -333,6 +338,7 @@ const TimerPage = () => {
           status: 'success',
           duration: 3000,
           isClosable: true,
+          position: 'top-left',
         });
       } else {
         throw new Error(result.message);
@@ -345,6 +351,7 @@ const TimerPage = () => {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        position: 'top-left',
       });
     } finally {
       setIsUpdating(false);
@@ -380,6 +387,7 @@ const TimerPage = () => {
           status: 'success',
           duration: 3000,
           isClosable: true,
+          position: 'top-left',
         });
       } else {
         throw new Error(result.message);
@@ -392,6 +400,7 @@ const TimerPage = () => {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        position: 'top-left',
       });
     } finally {
       setIsSaving(false);
@@ -421,6 +430,7 @@ const TimerPage = () => {
             status: 'success',
             duration: 3000,
             isClosable: true,
+            position: 'top-left',
           });
         } catch (clipboardError) {
           // Fallback: 임시 input으로 복사
@@ -437,6 +447,7 @@ const TimerPage = () => {
             status: 'success',
             duration: 3000,
             isClosable: true,
+            position: 'top-left',
           });
         }
       } else {
@@ -450,6 +461,7 @@ const TimerPage = () => {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        position: 'top-left',
       });
     }
   };
