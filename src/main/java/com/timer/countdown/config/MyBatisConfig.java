@@ -23,14 +23,10 @@ public class MyBatisConfig {
             new PathMatchingResourcePatternResolver().getResources("classpath:mappers/**/*.xml")
         );
         
-        // Type Aliases 패키지 설정
-        sessionFactory.setTypeAliasesPackage("com.timer.countdown.model");
-        
         // MyBatis 설정
         org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
-        configuration.setMapUnderscoreToCamelCase(true);  // snake_case -> camelCase 자동 변환
+        configuration.setMapUnderscoreToCamelCase(true);  // snake_case -> camelCase 자동 변환(EX.TIMER_ID -> timerId로 매핑시켜줌)
         configuration.setCacheEnabled(true);  // 2차 캐시 활성화
-        configuration.setDefaultFetchSize(100);
         configuration.setDefaultStatementTimeout(30);
         
         sessionFactory.setConfiguration(configuration);
