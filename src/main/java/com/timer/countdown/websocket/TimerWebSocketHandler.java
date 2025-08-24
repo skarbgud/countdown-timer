@@ -27,6 +27,9 @@ public class TimerWebSocketHandler implements WebSocketHandler {
     // 세션별 타이머 ID 매핑 (연결 해제 시 정리용)
     private final Map<WebSocketSession, String> sessionTimerMap = new ConcurrentHashMap<>();
 
+    // 세션별 동기화를 위한 락 저장소
+    private final Map<String, Object> sessionLocks = new ConcurrentHashMap<>();
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("WebSocket 연결 성립: {}", session.getId());
@@ -78,6 +81,9 @@ public class TimerWebSocketHandler implements WebSocketHandler {
         if (timerId != null) {
             removeFromTimerRoom(timerId, session);
         }
+        
+        // 세션 락 정리
+        sessionLocks.remove(session.getId());
     }
 
     @Override
@@ -261,12 +267,17 @@ public class TimerWebSocketHandler implements WebSocketHandler {
     /**
      * 개별 세션에게 메시지 전송
      */
-    @Synchronized
     private void sendMessage(WebSocketSession session, Map<String, Object> message) {
         try {
             if (session.isOpen()) {
-                String jsonMessage = objectMapper.writeValueAsString(message);
-                session.sendMessage(new TextMessage(jsonMessage));
+                // 세션별 동기화를 위한 락 사용
+                Object sessionLock = sessionLocks.computeIfAbsent(session.getId(), k -> new Object());
+                synchronized (sessionLock) {
+                    if (session.isOpen()) { // 다시 한번 확인
+                        String jsonMessage = objectMapper.writeValueAsString(message);
+                        session.sendMessage(new TextMessage(jsonMessage));
+                    }
+                }
             }
         } catch (IOException e) {
             log.error("메시지 전송 실패: {} - {}", session.getId(), e.getMessage());
