@@ -44,6 +44,7 @@ const TimerPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [minDateTime, setMinDateTime] = useState('');
+  const [isOwner, setIsOwner] = useState(false);
 
   const wsRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
@@ -94,6 +95,7 @@ const TimerPage = () => {
 
         setTimer(timerData);
         setIsExpired(timerData.expired || false);
+        setIsOwner(timerData.isOwner || false);
 
         // 초기 남은 시간 계산
         if (timerData.targetTime) {
@@ -517,7 +519,7 @@ const TimerPage = () => {
           </Box>
 
           {/* 목표 시간 수정 */}
-          {timer.isOwner && !isExpired && (
+          {isOwner && !isExpired && (
             <Card>
               <CardBody>
                 <HStack justify="space-between" align="center">
