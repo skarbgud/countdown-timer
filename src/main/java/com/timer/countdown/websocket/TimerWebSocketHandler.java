@@ -3,6 +3,7 @@ package com.timer.countdown.websocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timer.countdown.dto.TimestampDto;
 import lombok.RequiredArgsConstructor;
+import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -260,6 +261,7 @@ public class TimerWebSocketHandler implements WebSocketHandler {
     /**
      * 개별 세션에게 메시지 전송
      */
+    @Synchronized
     private void sendMessage(WebSocketSession session, Map<String, Object> message) {
         try {
             if (session.isOpen()) {
