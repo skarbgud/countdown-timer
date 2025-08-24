@@ -1,36 +1,37 @@
 #!/bin/bash
 
-echo "🚀 Docker 환경에서 카운트다운 타이머 애플리케이션 시작 중..."
+echo "Docker 환경에서 카운트다운 타이머 애플리케이션 시작 중..."
 
 # 애플리케이션 빌드
-echo "📦 애플리케이션 빌드 중..."
+echo "애플리케이션 빌드 중..."
 ./gradlew build -x test
 
 if [ $? -ne 0 ]; then
-    echo "❌ 빌드 실패! 스크립트를 중단합니다."
+    echo "빌드 실패. 스크립트를 중단합니다."
     exit 1
 fi
 
-echo "✅ 빌드 완료!"
+echo "빌드 완료"
 
 # Docker Compose로 전체 서비스 시작
-echo "🐳 Docker Compose로 서비스 시작 중..."
+echo "Docker Compose로 서비스 시작 중..."
 docker-compose up -d
 
-echo "⏳ 서비스 시작 대기 중..."
-echo "   (PostgreSQL 데이터베이스는 첫 시작 시 약 10-30초 소요될 수 있습니다)"
+echo "서비스 시작 대기 중..."
 
 # 서비스 상태 확인
-echo "📊 서비스 상태:"
+echo "서비스 상태:"
 docker-compose ps
 
+echo "로그 확인:"
+echo "PostgreSQL DB: docker-compose logs -f postgres-db"
+echo "Spring App: docker-compose logs -f timer-app"
+echo "Frontend: docker-compose logs -f frontend"
 echo ""
-echo "📝 로그 확인:"
-echo "   PostgreSQL DB: docker-compose logs -f postgres-db"
-echo "   Spring App: docker-compose logs -f timer-app"
+echo "중지: docker-compose down"
+echo "재시작: docker-compose restart"
 echo ""
-echo "🛑 중지: docker-compose down"
-echo "🔄 재시작: docker-compose restart"
-echo ""
-echo "💡 애플리케이션이 http://localhost:8088 에서 실행됩니다."
-echo "   PostgreSQL 데이터베이스: localhost:5432"
+echo "애플리케이션 접속 정보:"
+echo "백엔드 API: http://localhost:8088"
+echo "프론트엔드: http://localhost:3000"
+echo "PostgreSQL 데이터베이스: localhost:5432"
