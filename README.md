@@ -217,3 +217,5 @@ CASE) `A THREAD` 실행중에 sendMessage 실행중 <br>
 - 하지만 `@Synchronized` 로 메서드 전체를 동기화하니, 한 세션에서 메세지를 보내느 동안 다른 세션도 대기를 해야한다는 문제점
 ![img_4.png](img_4.png)
 - 세션마다 개별 Lock을 잡고 처리하도록 수정, open된 세션만 동기화 락 처리 
+- 하지만 여전히 synchronized로 한 세션에 대해 Lock을 잡고 기다리면 해당 세션의 메세지가 send되는데 까지의 Delay는 여전히 존재 
+- @Async 사용해서 비동기로 처리하면 될까 확인 필요
