@@ -42,6 +42,7 @@ const TimerPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
+  const [minDateTime, setMinDateTime] = useState('');
 
   const wsRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
@@ -58,9 +59,6 @@ const TimerPage = () => {
     const diff = target.getTime() - now.getTime();
 
     if (diff <= 0) {
-      if (!isExpired) {
-        setIsExpired(true);
-      }
       return '00:00:00';
     }
 
@@ -69,7 +67,7 @@ const TimerPage = () => {
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }, [isExpired]);
+  }, []);
 
   // 타이머 로드 함수
   const loadTimer = useCallback(async () => {
@@ -98,8 +96,12 @@ const TimerPage = () => {
 
         // 초기 남은 시간 계산
         if (timerData.targetTime) {
-          const remaining = calculateRemainingTime(timerData.targetTime);
-          setRemainingTime(remaining);
+          if (timerData.expired) {
+            setRemainingTime('00:00:00');
+          } else {
+            const remaining = calculateRemainingTime(timerData.targetTime);
+            setRemainingTime(remaining);
+          }
         }
       } else {
         toast({
@@ -126,17 +128,18 @@ const TimerPage = () => {
 
   // 남은 시간 업데이트 (1초마다)
   useEffect(() => {
-    if (!timer || !timer.targetTime) return;
+    if (!timer || !timer.targetTime || isExpired) return;
 
     const interval = setInterval(() => {
       const remaining = calculateRemainingTime(timer.targetTime);
       setRemainingTime(remaining);
 
-      // 만료 체크
+      // 만료 체크 (한 번만 실행되도록)
       const now = new Date();
       const target = new Date(timer.targetTime);
-      if (now >= target && !isExpired) {
+      if (now >= target) {
         setIsExpired(true);
+        setRemainingTime('00:00:00');
         toast({
           title: '시간 종료!',
           description: '설정된 시간이 다 되었습니다!',
@@ -148,7 +151,14 @@ const TimerPage = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timer?.targetTime, calculateRemainingTime, isExpired, toast]);
+  }, [timer, calculateRemainingTime, isExpired, toast]);
+
+  // isExpired 상태가 변경될 때 remainingTime 즉시 업데이트
+  useEffect(() => {
+    if (isExpired) {
+      setRemainingTime('00:00:00');
+    }
+  }, [isExpired]);
 
   // WebSocket 연결 함수
   const connectWebSocket = useCallback(() => {
@@ -256,9 +266,34 @@ const TimerPage = () => {
     };
   }, [loadTimer, connectWebSocket]);
 
+  // 현재 시간을 최소값으로 설정
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    setMinDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+  }, []);
+
   // 목표 시간 업데이트
   const updateTargetTime = async () => {
     if (!newTargetTime) return;
+
+    // 과거 시간 선택 검증
+    if (new Date(newTargetTime) <= new Date()) {
+      toast({
+        title: '잘못된 시간 선택',
+        description: '현재 시간보다 미래의 시간을 선택해주세요.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-left',
+      });
+      return;
+    }
 
     setIsUpdating(true);
     try {
@@ -483,6 +518,7 @@ const TimerPage = () => {
                         type="datetime-local"
                         value={newTargetTime}
                         onChange={(e) => setNewTargetTime(e.target.value)}
+                        min={minDateTime}
                         size="md"
                       />
                       <Button
@@ -495,6 +531,9 @@ const TimerPage = () => {
                         수정
                       </Button>
                     </HStack>
+                    <Text fontSize="sm" color="gray.500" textAlign="left" w="100%">
+                      현재 시간 이후의 미래 시간을 선택해주세요
+                    </Text>
                   </VStack>
                 )}
               </CardBody>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import {
@@ -18,11 +18,38 @@ import {
 const HomePage = () => {
   const [targetTime, setTargetTime] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [minDateTime, setMinDateTime] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
 
+  // 현재 시간을 최소값으로 설정
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    setMinDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 과거 시간 선택 검증
+    if (targetTime && new Date(targetTime) <= new Date()) {
+      toast({
+        title: '잘못된 시간 선택',
+        description: '현재 시간보다 미래의 시간을 선택해주세요.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-left',
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -102,9 +129,13 @@ const HomePage = () => {
                   type="datetime-local"
                   value={targetTime}
                   onChange={(e) => setTargetTime(e.target.value)}
+                  min={minDateTime}
                   size="lg"
                   borderRadius="md"
                 />
+                <Text fontSize="sm" color="gray.500" mt={1}>
+                  현재 시간 이후의 미래 시간을 선택해주세요
+                </Text>
               </FormControl>
 
               <Button
