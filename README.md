@@ -202,8 +202,7 @@ React 앱은 3000 포트에서 시작됩니다.
 - `application.yml`에서 올바른 프로파일이 활성화되었는지 확인
 - 환경 변수 `SPRING_PROFILES_ACTIVE` 설정 확인
 
-
-### 5. 트러블 슈팅
+## 트러블 슈팅
 ![img_1.png](img_1.png)
 - Render에서 타임스탬프 저장을 빠른 속도로 계속 누르게 되면 저장에 실패하는 현상 발생
 ![img_2.png](img_2.png)
