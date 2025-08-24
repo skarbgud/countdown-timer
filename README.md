@@ -91,43 +91,7 @@ React 앱은 3000 포트에서 시작됩니다.
 - **배포되어 있는 카운트다운 타이머 앱**: https://countdown-timer-app-cxn7.onrender.com/
 
 
-## 환경별 설정 (application.yml)
-
-### Local 환경 (기본값)
-- **프로파일**: `local`
-- **포트**: 8088
-- **데이터베이스**: localhost:5432:timer_db
-- **로깅**: DEBUG 레벨
-- **커넥션 풀**: 최대 10개
-
-### Docker 환경
-- **프로파일**: `docker`
-- **포트**: 8080
-- **데이터베이스**: postgres-db:5432:timer_db
-- **로깅**: INFO 레벨, 파일 출력
-- **커넥션 풀**: 최대 20개
-
-### Production 환경
-- **프로파일**: `prod`
-- **포트**: 8080
-- **데이터베이스**: prod-db:3306:timer_prod
-- **로깅**: WARN 레벨, 파일 출력
-- **커넥션 풀**: 최대 15개
-
-## Docker 서비스 구성
-
-### postgres-db
-- **이미지**: postgres:15
-- **데이터베이스**: timer_db
-- **사용자**: timer_user
-- **포트**: 5432 (외부), 5432 (내부)
-
-### timer-app
-- **이미지**: 로컬 빌드
-- **포트**: 8088
-- **의존성**: mysql-db (health check 완료 후 시작)
-
-## 🗄️ 데이터베이스 스키마
+## 데이터베이스 스키마
 
 PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
 
@@ -136,10 +100,49 @@ PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니�
 
 ##  API 엔드포인트
 
+### REST API
 - `POST /api/timers` - 새 타이머 생성
-- `GET /api/timers/{id}` - 타이머 상세 정보 조회
-- `PUT /api/timers/{id}/target-time` - 타이머 기준 시각 업데이트 (소유자만 가능)
-- `POST /api/timers/{id}/timestamps` - 타임스탬프 저장
+- `GET /api/timers/{timerId}` - 타이머 상세 정보 조회
+- `PUT /api/timers/{timerId}/target-time` - 타이머 기준 시각 업데이트 (소유자만 가능)
+- `POST /api/timers/{timerId}/timestamps` - 타임스탬프 저장
+
+### WebSocket API
+- `WS /ws` - 실시간 통신을 위한 WebSocket 연결
+  - **연결**: 클라이언트가 `/ws` 엔드포인트로 WebSocket 연결
+  - **메시지 타입**:
+    - `join`: 타이머 방 참가
+    - `leave`: 타이머 방 나가기
+    - `ping`: 연결 상태 확인
+
+### API 응답 형식
+```json
+{
+  "success": true,
+  "message": "성공 메시지",
+  "data": {
+    // 실제 데이터
+  }
+}
+```
+
+### WebSocket 메시지 형식
+```json
+// 클라이언트 → 서버
+{
+  "type": "join",
+  "timerId": "uuid-string"
+}
+
+// 서버 → 클라이언트
+{
+  "type": "targetTimeUpdated",
+  "timerId": "uuid-string",
+  "targetTime": "2024-01-01T12:00:00Z",
+  "serverTime": "2024-01-01T10:00:00Z",
+  "remainingSeconds": 7200,
+  "isExpired": false
+}
+```
 
 
 ## 실행 문제 발생시
@@ -156,6 +159,6 @@ PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니�
 - Java 17 이상이 설치되어 있는지 확인
 - Gradle 래퍼가 실행 가능한지 확인
 
-### 프로파일 문제
+### - 프로파일 문제
 - `application.yml`에서 올바른 프로파일이 활성화되었는지 확인
 - 환경 변수 `SPRING_PROFILES_ACTIVE` 설정 확인
