@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config/api';
+import { timerAPI } from '../services/api';
 import {
   Box,
   Container,
@@ -53,16 +53,8 @@ const HomePage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/timers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          targetTime: new Date(targetTime).toISOString()
-        })
-      });
-
-      const result = await response.json();
+      const result = await timerAPI.createTimer(targetTime);
+      
       if (result.success) {
         toast({
           title: '타이머 생성 성공',

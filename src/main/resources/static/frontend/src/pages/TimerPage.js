@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../config/api';
 import { WEBSOCKET_URL } from '../config/websocket';
+import { timerAPI } from '../services/api';
 import {
   Box,
   Container,
@@ -74,25 +74,11 @@ const TimerPage = () => {
   // 타이머 로드 함수
   const loadTimer = useCallback(async () => {
     try {
-      console.log('타이머 로드:', `${API_BASE_URL}/api/timers/${timerId}`);
-
-      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}`, {
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('타이머 데이터:', result);
-
+      const result = await timerAPI.getTimer(timerId);
+      
       if (result.success) {
         const timerData = result.data;
-        console.log("타이머 데이터 상세:", timerData);
-        console.log("owner:", timerData.isOwner);
-        console.log("expired:", timerData.expired);
-
+        
         setTimer(timerData);
         setIsExpired(timerData.expired || false);
         setIsOwner(timerData.isOwner || false);
@@ -109,7 +95,7 @@ const TimerPage = () => {
       } else {
         toast({
           title: '타이머 로드 실패',
-          description: result.message,
+          description: result.message || '타이머를 찾을 수 없습니다',
           status: 'error',
           duration: 5000,
           isClosable: true,
@@ -305,24 +291,9 @@ const TimerPage = () => {
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/target-time`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          targetTime: new Date(newTargetTime).toISOString()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await timerAPI.updateTargetTime(timerId, newTargetTime);
 
       if (result.success) {
-        console.log('목표 시간 업데이트 성공:', result.data);
-
         // 상태 즉시 업데이트
         setTimer(result.data);
         setIsExpired(result.data.expired || false);
@@ -343,7 +314,14 @@ const TimerPage = () => {
           position: 'top-left',
         });
       } else {
-        throw new Error(result.message);
+        toast({
+          title: '목표 시간 업데이트 실패',
+          description: result.message || '목표 시간 업데이트에 실패했습니다.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+          position: 'top-left',
+        });
       }
     } catch (error) {
       console.error('목표 시간 업데이트 실패:', error);
@@ -364,21 +342,8 @@ const TimerPage = () => {
   const saveTimestamp = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/timestamps`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          remainingTime: remainingTime
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-
+      const result = await timerAPI.saveTimestamp(timerId, remainingTime);
+      
       if (result.success) {
         // 타이머 정보 새로고침하여 새 타임스탬프 반영
         loadTimer();
@@ -392,7 +357,14 @@ const TimerPage = () => {
           position: 'top-left',
         });
       } else {
-        throw new Error(result.message);
+        toast({
+          title: '타임스탬프 저장 실패',
+          description: result.message || '타임스탬프 저장에 실패했습니다.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+          position: 'top-left',
+        });
       }
     } catch (error) {
       console.error('타임스탬프 저장 실패:', error);
