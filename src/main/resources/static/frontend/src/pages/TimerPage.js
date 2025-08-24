@@ -559,7 +559,7 @@ const TimerPage = () => {
                 <Stat textAlign="center">
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
                   <StatNumber
-                    fontSize="6xl"
+                    fontSize="5xl"
                     color={isExpired ? "red.500" : "blue.500"}
                     fontWeight="bold"
                   >
