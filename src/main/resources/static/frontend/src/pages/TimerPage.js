@@ -484,18 +484,36 @@ const TimerPage = () => {
       <Container maxW="4xl">
         <VStack spacing={6} align="stretch">
           {/* 헤더 */}
-          <Box textAlign="center">
-            <Heading size="2xl" mb={4}>
-              카운트다운 타이머
-            </Heading>
-            <VStack spacing={2}>
-              <Text fontSize="lg" color="gray.600">
-                목표 시각: {timer.targetTime?.replace('T', ' ').substring(0, 19)}Z (UTC+0)
-              </Text>
-              <Text fontSize="lg" color="gray.600">
-                {new Date(timer.targetTime).toLocaleString()} (UTC+9)
-              </Text>
-            </VStack>
+          <Box mb={8}>
+            <Box position="relative" mb={4}>
+              <HStack justify="space-between" align="center">
+                <IconButton
+                  onClick={() => navigate('/')}
+                  icon={<ArrowBackIcon />}
+                  colorScheme="gray"
+                  variant="ghost"
+                  size="lg"
+                  aria-label="뒤가기"
+                />
+                <Box flex="1" textAlign="center">
+                  <Heading size="xl">
+                    카운트다운 타이머
+                  </Heading>
+                </Box>
+                <Box w="48px" />
+              </HStack>
+            </Box>
+            
+            <Box textAlign="center">
+              <VStack spacing={2}>
+                <Text fontSize="lg" color="gray.600">
+                  목표 시각: {timer.targetTime?.replace('T', ' ').substring(0, 19)}Z (UTC+0)
+                </Text>
+                <Text fontSize="lg" color="gray.600">
+                  {new Date(timer.targetTime).toLocaleString()} (UTC+9)
+                </Text>
+              </VStack>
+            </Box>
           </Box>
 
           {/* 목표 시간 수정 */}
