@@ -47,10 +47,8 @@ services:
     depends_on:
       - timer-app
     environment:
-      - REACT_APP_API_URL=http://localhost:8088
-    volumes:
-      - ./src/main/resources/static/frontend/src:/app/src
-      - ./src/main/resources/static/frontend/public:/app/public
+      - REACT_APP_API_URL=http://timer-app:8080
+    restart: unless-stopped
 
 volumes:
   postgres-data:
