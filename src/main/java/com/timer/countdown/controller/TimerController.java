@@ -104,19 +104,4 @@ public class TimerController {
 
         return ResponseEntity.ok(ResponseDto.success(timestampDto, "타임스탬프가 저장되었습니다."));
     }
-
-    /**
-     * 공유 링크 생성 API
-     * - 현재 타이머 상태를 기반으로 공유 가능한 URL 반환
-     *
-     * @param timerId 공유할 타이머 ID
-     * @return 공유 링크 URL
-     */
-    @GetMapping("/{timerId}/share")
-    public ResponseEntity<ResponseDto<Map<String, String>>> generateShareLink(@PathVariable("timerId") String timerId) {
-        String shareUrl = timerService.generateShareUrl(timerId);
-
-        Map<String, String> response = Map.of("shareUrl", shareUrl);
-        return ResponseEntity.ok(ResponseDto.success(response, "공유 링크가 생성되었습니다."));
-    }
 }

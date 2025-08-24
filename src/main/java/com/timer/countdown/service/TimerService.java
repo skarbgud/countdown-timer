@@ -205,14 +205,4 @@ public class TimerService {
         timerWebSocketHandler.broadcastTimestampAdded(timerId, timestampDto);
         return timestampDto;
     }
-
-    /**
-     * 공유 링크 생성
-     * @param timerId
-     * @return
-     */
-    public String generateShareUrl(String timerId) {
-        return "/timer/" + timerId;
-    }
-
 }

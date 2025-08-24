@@ -408,51 +408,39 @@ const TimerPage = () => {
   };
 
   // 공유 링크 생성
-  const generateShareLink = async () => {
+  const generateShareLink = () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/share`);
+      const fullUrl = `${window.location.origin}/timer/${timerId}`;
+      setShareUrl(fullUrl);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      // 클립보드에 복사 시도
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        toast({
+          title: '공유 링크 생성',
+          description: '공유 링크가 클립보드에 복사되었습니다.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-left',
+        });
+      }).catch(() => {
+        // Fallback: 임시 input으로 복사
+        const tempInput = document.createElement('input');
+        tempInput.value = fullUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
 
-      const result = await response.json();
-      if (result.success) {
-        const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
-        setShareUrl(fullUrl);
-
-        // 클립보드에 복사 시도
-        try {
-          await navigator.clipboard.writeText(fullUrl);
-          toast({
-            title: '공유 링크 생성',
-            description: '공유 링크가 클립보드에 복사되었습니다.',
-            status: 'success',
-            duration: 3000,
-            isClosable: true,
-            position: 'top-left',
-          });
-        } catch (clipboardError) {
-          // Fallback: 임시 input으로 복사
-          const tempInput = document.createElement('input');
-          tempInput.value = fullUrl;
-          document.body.appendChild(tempInput);
-          tempInput.select();
-          document.execCommand('copy');
-          document.body.removeChild(tempInput);
-
-          toast({
-            title: '공유 링크 생성',
-            description: '공유 링크가 클립보드에 복사되었습니다.',
-            status: 'success',
-            duration: 3000,
-            isClosable: true,
-            position: 'top-left',
-          });
-        }
-      } else {
-        throw new Error(result.message);
-      }
+        toast({
+          title: '공유 링크 생성',
+          description: '공유 링크가 클립보드에 복사되었습니다.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top-left',
+        });
+      });
     } catch (error) {
       console.error('공유 링크 생성 실패:', error);
       toast({
