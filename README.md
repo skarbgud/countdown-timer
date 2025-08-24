@@ -136,9 +136,6 @@
 ### 2. 수동으로 Docker 실행
 
 ```bash
-# 애플리케이션 빌드
-./gradlew build -x test
-
 # Docker Compose로 서비스 시작
 docker-compose up -d
 ```
@@ -182,7 +179,8 @@ React 앱은 3000 포트에서 시작됩니다.
 
 ### 4. 서비스 접속
 
-- **로컬 카운트다운 타이머 앱**: http://localhost:3000
+- **로컬 카운트다운 타이머 앱**: http://localhost:3000 or http://localhost:8088
+- 
 - **배포되어 있는 카운트다운 타이머 앱**: https://countdown-timer-app-cxn7.onrender.com/
 
 
