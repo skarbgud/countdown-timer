@@ -35,15 +35,6 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
 
-mybatis:
-  mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: com.timer.countdown.model
-  configuration:
-    map-underscore-to-camel-case: true
-    default-fetch-size: 100
-    default-statement-timeout: 30
-    cache-enabled: true
-
 logging:
   level:
     com.timer.countdown.mapper: DEBUG
@@ -72,15 +63,6 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-
-mybatis:
-  mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: com.timer.countdown.model
-  configuration:
-    map-underscore-to-camel-case: true
-    default-fetch-size: 100
-    default-statement-timeout: 30
-    cache-enabled: true
 
 logging:
   level:
@@ -117,15 +99,6 @@ spring:
 spring.boot.loader:
   zip.disable-zip64-extra-field-validation: true
 
-mybatis:
-  mapper-locations: classpath:mappers/**/*.xml
-  type-aliases-package: com.timer.countdown.model
-  configuration:
-    map-underscore-to-camel-case: true
-    default-fetch-size: 50  # 메모리 사용량 최적화
-    default-statement-timeout: 30
-    cache-enabled: true
-
 logging:
   level:
     com.timer.countdown: INFO
@@ -138,14 +111,4 @@ logging:
 
 server:
   port: ${PORT:8080}  # Render가 제공하는 포트 사용
-  shutdown: graceful
-
-# JVM 최적화 설정
-management:
-  endpoint:
-    health:
-      show-details: never
-  endpoints:
-    web:
-      exposure:
-        include: health
+  shutdown: graceful # graceful shutdown으로 요청들어온건 처리하고 종료
