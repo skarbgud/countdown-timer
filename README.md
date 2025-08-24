@@ -28,76 +28,6 @@
 - Axios (API 호출)
 - SockJS (웹소켓 통신)
 
-
-## 시작 (Docker 환경)
-
-### 1. 전체 애플리케이션 실행
-
-```bash
-# 모든 서비스 빌드 및 시작
-./start-docker.sh
-```
-
-### 2. 수동으로 Docker 실행
-
-```bash
-# 애플리케이션 빌드
-./gradlew build -x test
-
-# Docker Compose로 서비스 시작
-docker-compose up -d
-```
-
-## 시작 (local 환경)
-### 1. 로컬 PostgreSQL 데이터베이스 실행
-
-```bash
-# PostgreSQL만 시작 (개발용)
-docker-compose up -d postgres-db
-```
-
-### 2. 백엔드 실행
-
-```bash
-# Java 17 이상이 설치되어 있는지 확인
-java -version
-
-# 프로젝트 루트 디렉토리에서 실행
-./gradlew bootRun
-```
-
-애플리케이션은 8088 포트에서 시작됩니다.
-
-### 3. 프론트엔드 실행
-
-```bash
-# frontend 디렉토리로 이동
-cd src/main/resources/static/frontend
-
-# 종속성 설치
-npm install
-
-# 개발 서버 시작
-npm start
-```
-
-React 앱은 3000 포트에서 시작됩니다.
-
-
-
-### 4. 서비스 접속
-
-- **로컬 카운트다운 타이머 앱**: http://localhost:3000
-- **배포되어 있는 카운트다운 타이머 앱**: https://countdown-timer-app-cxn7.onrender.com/
-
-
-## 데이터베이스 스키마
-
-PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니다:
-
-- `timer`: 타이머 기본 정보 (ID, 기준 시각, 소유자 세션 ID)
-- `timestamps`: 저장된 타임스탬프 정보 (ID, 타이머 ID, 캡처 시각, 남은 시간)
-
 ## 시스템 아키텍처
 
 ### 전체 구조
@@ -113,6 +43,10 @@ PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니�
 - **페이지 컴포넌트**: 홈페이지(타이머 생성), 타이머 페이지(타이머 조회/수정)
 - **API 모듈**: Axios를 사용한 백엔드 API 호출
 - **WebSocket 모듈**: SockJS를 사용한 실시간 데이터 수신
+
+## 데이터베이스 스키마
+- `TIMER`: 타이머 (TIMER_ID, TARGET_TIME, OWNER_ID, IS_EXPIRED, CREATED_AT, UPDATED_AT)
+- `TIMESTAMP`: 타임스탬프 정보 (ID, TIMER_ID, REMAINING_TIME, CAPTURED_TIME, CREATED_AT)
 
 ## 서버-클라이언트 동기화 방식
 
@@ -190,6 +124,66 @@ PostgreSQL 데이터베이스에 다음 테이블이 자동으로 생성됩니�
   "isExpired": false
 }
 ```
+## 시작 (Docker 환경)
+
+### 1. 전체 애플리케이션 실행
+
+```bash
+# 모든 서비스 빌드 및 시작
+./start-docker.sh
+```
+
+### 2. 수동으로 Docker 실행
+
+```bash
+# 애플리케이션 빌드
+./gradlew build -x test
+
+# Docker Compose로 서비스 시작
+docker-compose up -d
+```
+
+## 시작 (local 환경)
+### 1. 로컬 PostgreSQL 데이터베이스 실행
+
+```bash
+# PostgreSQL만 시작 (개발용)
+docker-compose up -d postgres-db
+```
+
+### 2. 백엔드 실행
+
+```bash
+# Java 17 이상이 설치되어 있는지 확인
+java -version
+
+# 프로젝트 루트 디렉토리에서 실행
+./gradlew bootRun
+```
+
+애플리케이션은 8088 포트에서 시작됩니다.
+
+### 3. 프론트엔드 실행
+
+```bash
+# frontend 디렉토리로 이동
+cd src/main/resources/static/frontend
+
+# 종속성 설치
+npm install
+
+# 개발 서버 시작
+npm start
+```
+
+React 앱은 3000 포트에서 시작됩니다.
+
+
+
+### 4. 서비스 접속
+
+- **로컬 카운트다운 타이머 앱**: http://localhost:3000
+- **배포되어 있는 카운트다운 타이머 앱**: https://countdown-timer-app-cxn7.onrender.com/
 
 
 ## 실행 문제 발생시
