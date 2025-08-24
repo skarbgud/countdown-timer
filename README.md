@@ -218,4 +218,49 @@ CASE) `A THREAD` 실행중에 sendMessage 실행중 <br>
 ![img_4.png](img_4.png)
 - 세션마다 개별 Lock을 잡고 처리하도록 수정, open된 세션만 동기화 락 처리 
 - 하지만 여전히 synchronized로 한 세션에 대해 Lock을 잡고 기다리면 해당 세션의 메세지가 send되는데 까지의 Delay는 여전히 존재 
-- @Async 사용해서 비동기로 처리하면 될까 확인 필요
+- @Async 사용해서 비동기로 처리하면 될까 확인 필요 (시간이 부족해서 정상동작하는지 확인할 시간이 없어 코드 미반영)
+
+```
+@Configuration
+@EnableAsync
+public class AsyncConfig {
+
+    @Bean(name = "taskExecutor")
+    public Executor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("WebSocket-");
+        executor.initialize();
+        return executor;
+    }
+}
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class WebSocketMessageService {
+
+    private final ObjectMapper objectMapper;
+
+    /**
+     * 개별 세션에게 메시지 전송 (비동기)
+     */
+    @Async
+    public CompletableFuture<Void> sendMessage(WebSocketSession session, Map<String, Object> message) {
+        try {
+            if (session.isOpen()) {
+                String jsonMessage = objectMapper.writeValueAsString(message);
+                session.sendMessage(new TextMessage(jsonMessage));
+                log.debug("메시지 전송 성공: {} -> {}", session.getId(), message.get("type"));
+            }
+            return CompletableFuture.completedFuture(null);
+        } catch (IOException e) {
+            log.error("메시지 전송 실패: {} - {}", session.getId(), e.getMessage());
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+}
+```
