@@ -180,16 +180,21 @@ public class TimerWebSocketHandler implements WebSocketHandler {
      * - 해당 타이머 방의 모든 연결에게 전송
      */
     public void broadcastTargetTimeUpdate(String timerId, Instant newTargetTime) {
+        Instant now = Instant.now();
+        long remainingSeconds = newTargetTime.getEpochSecond() - now.getEpochSecond();
+        
         Map<String, Object> message = Map.of(
                 "type", "targetTimeUpdated",
                 "timerId", timerId,
                 "targetTime", newTargetTime.toString(),
-                "serverTime", Instant.now().toString()
+                "serverTime", now.toString(),
+                "remainingSeconds", remainingSeconds,
+                "isExpired", remainingSeconds <= 0
         );
 
         broadcastToTimerRoom(timerId, message);
 
-        log.info("기준 시각 변경 브로드캐스트: {} -> {}", timerId, newTargetTime);
+        log.info("기준 시각 변경 브로드캐스트: {} -> {} (남은시간: {}초)", timerId, newTargetTime, remainingSeconds);
     }
 
     /**

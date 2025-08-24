@@ -13,7 +13,6 @@
     "axios": "^1.4.0",
     "framer-motion": "^6.5.1",
     "react": "^18.2.0",
-    "react-countdown": "^2.3.6",
     "react-datepicker": "^8.7.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.14.1",

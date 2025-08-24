@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { WEBSOCKET_URL } from '../config/websocket';
-import Countdown from 'react-countdown';
 import {
   Box,
   Container,
@@ -35,96 +34,72 @@ import { CopyIcon, EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
 const TimerPage = () => {
   const { timerId } = useParams();
   const [timer, setTimer] = useState(null);
-  const [serverTime, setServerTime] = useState(null);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentTimeLocal, setCurrentTimeLocal] = useState('');
+  const [remainingTime, setRemainingTime] = useState('');
   const [newTargetTime, setNewTargetTime] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [timerUpdateKey, setTimerUpdateKey] = useState(0); // 타이머 업데이트를 위한 key
+  const [isExpired, setIsExpired] = useState(false);
+
   const wsRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const toast = useToast();
   const { hasCopied, onCopy } = useClipboard(shareUrl);
 
-  const CountdownDisplay = ({ targetTime, expired }) => {
-    if (expired) {
-      return (
-        <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
-          ⏰ 시간 종료!
-        </StatNumber>
-      );
+  // 남은 시간 계산 함수
+  const calculateRemainingTime = useCallback((targetTime) => {
+    if (!targetTime) return '00:00:00';
+
+    const now = new Date();
+    const target = new Date(targetTime);
+    const diff = target.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      if (!isExpired) {
+        setIsExpired(true);
+      }
+      return '00:00:00';
     }
 
-    return (
-      <Countdown
-        date={new Date(targetTime)}
-        renderer={({ days, hours, minutes, seconds, completed }) => {
-          if (completed) {
-            return (
-              <StatNumber fontSize="6xl" color="red.500" fontWeight="bold">
-                ⏰ 시간 종료!
-              </StatNumber>
-            );
-          }
-          
-          const totalHours = days * 24 + hours;
-          
-          return (
-            <StatNumber 
-              fontSize="6xl" 
-              color="blue.500"
-              fontWeight="bold"
-            >
-              ⏳ {totalHours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-            </StatNumber>
-          );
-        }}
-      />
-    );
-  };
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-  // 타이머 로드 함수를 useCallback으로 메모이제이션
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [isExpired]);
+
+  // 타이머 로드 함수
   const loadTimer = useCallback(async () => {
     try {
       console.log('타이머 로드:', `${API_BASE_URL}/api/timers/${timerId}`);
-      
+
       const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}`, {
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log('타이머 데이터:', result);
-      
+
       if (result.success) {
         const timerData = result.data;
-        console.log("==timerData===")
-        console.log(timerData)
-        console.log("owner:", timerData.owner)
-        console.log("expired:", timerData.expired)
+        console.log("타이머 데이터 상세:", timerData);
+        console.log("owner:", timerData.isOwner);
+        console.log("expired:", timerData.expired);
+
         setTimer(timerData);
-        
-        // 서버 시간 설정
-        if (timerData.serverTime) {
-          const serverTimeObj = new Date(timerData.serverTime);
-          setServerTime(serverTimeObj);
-          
-          // 서버 시간과 로컬 시간의 차이 계산
-          const localTime = new Date();
-          const offset = localTime.getTime() - serverTimeObj.getTime();
-          setServerTimeOffset(offset);
-          
-                  console.log('서버 시간:', serverTimeObj);
-        console.log('시간 오프셋:', offset);
+        setIsExpired(timerData.expired || false);
+
+        // 초기 남은 시간 계산
+        if (timerData.targetTime) {
+          const remaining = calculateRemainingTime(timerData.targetTime);
+          setRemainingTime(remaining);
         }
       } else {
         toast({
@@ -133,224 +108,146 @@ const TimerPage = () => {
           status: 'error',
           duration: 5000,
           isClosable: true,
-          position: 'top-left',
         });
       }
     } catch (error) {
       console.error('타이머 로드 실패:', error);
       toast({
         title: '오류 발생',
-        description: '타이머를 찾을 수 없습니다: ' + error.message,
+        description: '타이머를 찾을 수 없습니다',
         status: 'error',
         duration: 5000,
         isClosable: true,
-        position: 'top-left',
       });
     } finally {
       setLoading(false);
     }
-  }, [timerId, toast]);
+  }, [timerId, toast, calculateRemainingTime]);
 
-
-
-  // 타이머 만료 체크
+  // 남은 시간 업데이트 (1초마다)
   useEffect(() => {
-    if (!timer) return;
+    if (!timer || !timer.targetTime) return;
 
-    const checkExpiration = () => {
-      const now = new Date().getTime();
-      const target = new Date(timer.targetTime).getTime();
-      
-      if (now >= target && !timer.expired) {
-        // 타이머 만료 처리
+    const interval = setInterval(() => {
+      const remaining = calculateRemainingTime(timer.targetTime);
+      setRemainingTime(remaining);
+
+      // 만료 체크
+      const now = new Date();
+      const target = new Date(timer.targetTime);
+      if (now >= target && !isExpired) {
+        setIsExpired(true);
         toast({
           title: '시간 종료!',
           description: '설정된 시간이 다 되었습니다!',
           status: 'warning',
           duration: 5000,
           isClosable: true,
-          position: 'top-left',
         });
-        
-        // 타이머 상태 업데이트
-        setTimer(prev => ({ ...prev, expired: true }));
       }
-    };
-
-    checkExpiration();
-    const interval = setInterval(checkExpiration, 1000);
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [timer, toast]);
+  }, [timer?.targetTime, calculateRemainingTime, isExpired, toast]);
 
-  // WebSocket 연결 함수를 useCallback으로 메모이제이션
+  // WebSocket 연결 함수
   const connectWebSocket = useCallback(() => {
     try {
-      // 기존 연결이 있다면 먼저 정리
       if (wsRef.current) {
         console.log('기존 WebSocket 연결 정리 중...');
         wsRef.current.close();
       }
 
       console.log('WebSocket 연결 시도:', WEBSOCKET_URL);
-      console.log('현재 타이머 ID:', timerId);
-      
       wsRef.current = new WebSocket(WEBSOCKET_URL);
-      
-      // 연결 상태 모니터링
-      console.log('WebSocket readyState:', wsRef.current.readyState);
-      
+
       wsRef.current.onopen = () => {
-        console.log('WebSocket 연결됨 - readyState:', wsRef.current.readyState);
-        console.log('WebSocket URL:', wsRef.current.url);
-        console.log('현재 도메인:', window.location.hostname);
-        
-        // 연결 성공 시 재연결 시도 횟수 리셋
+        console.log('WebSocket 연결됨');
         reconnectAttemptsRef.current = 0;
-        
+
         const joinMessage = {
           type: 'join',
           timerId: timerId
         };
-        console.log('타이머 방 참가 메시지 전송:', joinMessage);
-        
+        console.log('타이머 방 참가:', joinMessage);
         wsRef.current.send(JSON.stringify(joinMessage));
-        console.log('타이머 방 참가 메시지 전송 완료');
       };
 
       wsRef.current.onmessage = (event) => {
         const message = JSON.parse(event.data);
         console.log('WebSocket 메시지 수신:', message);
-        
+
         if (message.type === 'targetTimeUpdated') {
-          // 타이머 업데이트 시 즉시 상태 업데이트
-          if (timer) {
-            const updatedTimer = {
-              ...timer,
-              targetTime: message.targetTime,
-              expired: message.isExpired
-            };
-            setTimer(updatedTimer);
-            
-            // 서버 시간 업데이트
-            if (message.serverTime) {
-              const serverTimeObj = new Date(message.serverTime);
-              setServerTime(serverTimeObj);
-              
-              // 서버 시간과 로컬 시간의 차이 계산
-              const localTime = new Date();
-              const offset = localTime.getTime() - serverTimeObj.getTime();
-              setServerTimeOffset(offset);
-            }
-          }
-          
-          // Countdown 컴포넌트 강제 리렌더링
-          setTimerUpdateKey(prev => prev + 1);
-          
+          console.log('목표 시간 업데이트됨:', message.targetTime);
+
+          // 타이머 상태 업데이트
+          setTimer(prev => ({
+            ...prev,
+            targetTime: message.targetTime,
+            expired: message.isExpired || false
+          }));
+
+          setIsExpired(message.isExpired || false);
+
+          // 즉시 남은 시간 계산
+          const remaining = calculateRemainingTime(message.targetTime);
+          setRemainingTime(remaining);
+
           toast({
             title: '타이머 업데이트',
             description: '목표 시간이 업데이트되었습니다.',
             status: 'info',
             duration: 3000,
             isClosable: true,
-            position: 'top-left',
           });
         } else if (message.type === 'timestampAdded') {
-          loadTimer(); // 새로고침
+          loadTimer();
         } else if (message.type === 'timerExpired') {
-          // 타이머 만료 시 즉시 상태 업데이트
-          if (timer) {
-            setTimer(prev => ({
-              ...prev,
-              expired: true
-            }));
-          }
-          
-          // Countdown 컴포넌트 강제 리렌더링
-          setTimerUpdateKey(prev => prev + 1);
-          
-          // 토스트 메시지로 알림
+          setIsExpired(true);
+          setRemainingTime('00:00:00');
+
           toast({
             title: '시간 종료!',
             description: '설정된 시간이 다 되었습니다!',
             status: 'warning',
             duration: 5000,
             isClosable: true,
-            position: 'top-left',
           });
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket 오류 발생:', error);
-        console.error('WebSocket readyState:', wsRef.current.readyState);
-        console.error('WebSocket URL:', wsRef.current.url);
-        
-        // WebSocket 오류 시 재연결 시도 (최대 시도 횟수 제한)
+        console.error('WebSocket 오류:', error);
+
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
-          console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}...`);
-          setTimeout(() => {
-            connectWebSocket();
-          }, 3000);
-        } else {
-          console.error('WebSocket 최대 재연결 시도 횟수 초과');
+          console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
+          setTimeout(() => connectWebSocket(), 3000);
         }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('WebSocket 연결 종료:', {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean
-        });
-        
-        // 정상적인 종료가 아닌 경우 재연결 시도 (최대 시도 횟수 제한)
+        console.log('WebSocket 연결 종료:', event.code, event.reason);
+
         if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
-          console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}...`);
-          
-          // Render 환경에서는 더 빠른 재연결 시도
-          const reconnectDelay = window.location.hostname !== 'localhost' ? 1000 : 3000;
-          setTimeout(() => {
-            connectWebSocket();
-          }, reconnectDelay);
-        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-          console.error('WebSocket 최대 재연결 시도 횟수 초과. 수동 새로고침이 필요합니다.');
-          toast({
-            title: '연결 오류',
-            description: 'WebSocket 연결이 끊어졌습니다. 페이지를 새로고침해주세요.',
-            status: 'error',
-            duration: 10000,
-            isClosable: true,
-            position: 'top-left',
-          });
+          console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
+          setTimeout(() => connectWebSocket(), 3000);
         }
       };
     } catch (error) {
-      console.error('WebSocket 연결 생성 실패:', error);
-      // 연결 실패 시 재시도 (최대 시도 횟수 제한)
-      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-        reconnectAttemptsRef.current++;
-        console.log(`WebSocket 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}...`);
-        setTimeout(() => {
-          connectWebSocket();
-        }, 3000);
-      } else {
-        console.error('WebSocket 최대 재연결 시도 횟수 초과');
-      }
+      console.error('WebSocket 연결 실패:', error);
     }
-  }, [timerId, loadTimer, toast]);
+  }, [timerId, calculateRemainingTime, loadTimer, toast]);
 
-  // 타이머 로드와 WebSocket 연결
+  // 초기 로드 및 WebSocket 연결
   useEffect(() => {
     loadTimer();
-    
-    // WebSocket 연결을 약간 지연시켜 백엔드가 완전히 준비되도록 함
+
     const wsTimer = setTimeout(() => {
       connectWebSocket();
     }, 1000);
-    
+
     return () => {
       clearTimeout(wsTimer);
       if (wsRef.current) {
@@ -359,58 +256,10 @@ const TimerPage = () => {
     };
   }, [loadTimer, connectWebSocket]);
 
-  // 주기적으로 타이머 상태 체크 (1초마다) - 서버 리소스 최소화를 위해 클라이언트에서만 처리
-  useEffect(() => {
-    if (!timer || timer.expired) return;
-    
-    const interval = setInterval(() => {
-      const now = new Date();
-      const targetTime = new Date(timer.targetTime);
-      
-      if (now >= targetTime && !timer.expired) {
-        // 로컬에서 만료 상태 업데이트
-        setTimer(prev => ({
-          ...prev,
-          expired: true
-        }));
-        setTimerUpdateKey(prev => prev + 1);
-        
-        // 토스트 메시지로 알림
-        toast({
-          title: '시간 종료!',
-          description: '설정된 시간이 다 되었습니다!',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-          position: 'top-left',
-        });
-      }
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [timer]);
+  // 목표 시간 업데이트
+  const updateTargetTime = async () => {
+    if (!newTargetTime) return;
 
-  // 현재 시간 업데이트
-  useEffect(() => {
-    if (!serverTime) return;
-    
-    const updateCurrentTime = () => {
-      const now = new Date(serverTime.getTime() + Date.now() - (serverTime.getTime() + serverTimeOffset));
-      setCurrentTime(now.toISOString().replace('T', ' ').substring(0, 19) + 'Z (UTC+0)');
-      setCurrentTimeLocal(now.toLocaleString() + " (UTC+9)");
-    };
-    
-    // 초기 설정
-    updateCurrentTime();
-    
-    const interval = setInterval(() => {
-      updateCurrentTime();
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [serverTime, serverTimeOffset]);
-
-    const updateTargetTime = async () => {
     setIsUpdating(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/target-time`, {
@@ -421,141 +270,113 @@ const TimerPage = () => {
           targetTime: new Date(newTargetTime).toISOString()
         })
       });
-      
-      // HTTP 상태 코드 체크
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || '목표 시간 업데이트에 실패했습니다.'}`);
+        throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        console.log('목표 시간 업데이트 API 응답:', result);
-        console.log('업데이트된 타이머 데이터:', result.data);
-        console.log('새로운 targetTime:', result.data.targetTime);
-        
-        // 새로운 타이머 정보로 상태 업데이트
-        const timerData = result.data;
-        setTimer(timerData);
-        
-        // 서버 시간 업데이트
-        if (timerData.serverTime) {
-          const serverTimeObj = new Date(timerData.serverTime);
-          setServerTime(serverTimeObj);
-          
-          // 서버 시간과 로컬 시간의 차이 계산
-          const localTime = new Date();
-          const offset = localTime.getTime() - serverTimeObj.getTime();
-          setServerTimeOffset(offset);
-          console.log('서버 시간 업데이트됨:', serverTimeObj, '오프셋:', offset);
-        }
-        
+        console.log('목표 시간 업데이트 성공:', result.data);
+
+        // 상태 즉시 업데이트
+        setTimer(result.data);
+        setIsExpired(result.data.expired || false);
+
+        // 남은 시간 재계산
+        const remaining = calculateRemainingTime(result.data.targetTime);
+        setRemainingTime(remaining);
+
         setIsEditing(false);
         setNewTargetTime('');
-        
+
         toast({
           title: '성공',
           description: '목표 시간이 업데이트되었습니다.',
           status: 'success',
           duration: 3000,
           isClosable: true,
-          position: 'top-left',
         });
       } else {
-        throw new Error(result.message || '목표 시간 업데이트에 실패했습니다.');
+        throw new Error(result.message);
       }
     } catch (error) {
+      console.error('목표 시간 업데이트 실패:', error);
       toast({
         title: '오류 발생',
         description: '목표 시간 업데이트에 실패했습니다.',
         status: 'error',
         duration: 5000,
         isClosable: true,
-        position: 'top-left',
       });
     } finally {
       setIsUpdating(false);
     }
   };
 
-    const saveTimestamp = async () => {
+  // 타임스탬프 저장
+  const saveTimestamp = async () => {
     setIsSaving(true);
     try {
-      let timeToSave = '00:00:00';
-
-      if (timer && serverTime) {
-        const now = new Date(serverTime.getTime() + Date.now() - (serverTime.getTime() + serverTimeOffset));
-        const targetTime = new Date(timer.targetTime);
-        const diff = targetTime.getTime() - now.getTime();
-        
-        if (diff > 0) {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-          timeToSave = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-      }
-      
       const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/timestamps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          remainingTime: timeToSave
+          remainingTime: remainingTime
         })
       });
 
-      // HTTP 상태 코드 체크
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || '타임스탬프 저장에 실패했습니다.'}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
+        // 타이머 정보 새로고침하여 새 타임스탬프 반영
+        loadTimer();
+
         toast({
           title: '성공',
           description: '타임스탬프가 저장되었습니다.',
           status: 'success',
           duration: 3000,
           isClosable: true,
-          position: 'top-left',
         });
       } else {
-        throw new Error(result.message || '타임스탬프 저장에 실패했습니다.');
+        throw new Error(result.message);
       }
     } catch (error) {
+      console.error('타임스탬프 저장 실패:', error);
       toast({
         title: '오류 발생',
         description: '타임스탬프 저장에 실패했습니다.',
         status: 'error',
         duration: 5000,
         isClosable: true,
-        position: 'top-left',
       });
     } finally {
       setIsSaving(false);
     }
   };
 
+  // 공유 링크 생성
   const generateShareLink = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/timers/${timerId}/share`);
-      
-      // HTTP 상태 코드 체크
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || '공유 링크 생성에 실패했습니다.'}`);
+        throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const result = await response.json();
       if (result.success) {
         const fullUrl = `${window.location.origin}${result.data.shareUrl}`;
         setShareUrl(fullUrl);
-        
-        // 클립보드에 복사
+
+        // 클립보드에 복사 시도
         try {
           await navigator.clipboard.writeText(fullUrl);
           toast({
@@ -564,40 +385,35 @@ const TimerPage = () => {
             status: 'success',
             duration: 3000,
             isClosable: true,
-            position: 'top-left',
           });
         } catch (clipboardError) {
-          // 클립보드 API가 지원되지 않는 경우 fallback
-          console.warn('클립보드 API 지원 안됨, fallback 사용:', clipboardError);
-          
-          // 임시 input 요소를 생성하여 복사
+          // Fallback: 임시 input으로 복사
           const tempInput = document.createElement('input');
           tempInput.value = fullUrl;
           document.body.appendChild(tempInput);
           tempInput.select();
           document.execCommand('copy');
           document.body.removeChild(tempInput);
-          
+
           toast({
             title: '공유 링크 생성',
             description: '공유 링크가 클립보드에 복사되었습니다.',
             status: 'success',
             duration: 3000,
             isClosable: true,
-            position: 'top-left',
           });
         }
       } else {
-        throw new Error(result.message || '공유 링크 생성에 실패했습니다.');
+        throw new Error(result.message);
       }
     } catch (error) {
+      console.error('공유 링크 생성 실패:', error);
       toast({
         title: '오류 발생',
         description: '공유 링크 생성에 실패했습니다.',
         status: 'error',
         duration: 5000,
         isClosable: true,
-        position: 'top-left',
       });
     }
   };
@@ -630,23 +446,24 @@ const TimerPage = () => {
   return (
     <Box minH="100vh" bg="gray.50" py={8}>
       <Container maxW="4xl">
-        <VStack align="stretch">
+        <VStack spacing={6} align="stretch">
           {/* 헤더 */}
           <Box textAlign="center">
             <Heading size="2xl" mb={4}>
               카운트다운 타이머
             </Heading>
-            <Text fontSize="lg" color="gray.600">
-              목표 시각: {(timer.targetTime)} (UTC+0)
-            </Text>
-            <Text fontSize="lg" color="gray.600">
-              {new Date(timer.targetTime).toLocaleString()} (UTC+9)
-            </Text>
+            <VStack spacing={2}>
+              <Text fontSize="lg" color="gray.600">
+                목표 시각: {timer.targetTime?.replace('T', ' ').substring(0, 19)}Z (UTC+0)
+              </Text>
+              <Text fontSize="lg" color="gray.600">
+                {new Date(timer.targetTime).toLocaleString()} (UTC+9)
+              </Text>
+            </VStack>
           </Box>
 
           {/* 목표 시간 수정 */}
-          {console.log("렌더링 조건 확인2:", { owner: timer?.isOwner, expired: timer?.isExpired, timer })}
-          {timer.isOwner && !timer.isExpired && (
+          {timer.isOwner && !isExpired && (
             <Card>
               <CardBody>
                 <HStack justify="space-between" align="center">
@@ -654,11 +471,11 @@ const TimerPage = () => {
                   <IconButton
                     icon={isEditing ? <CloseIcon /> : <EditIcon />}
                     onClick={() => setIsEditing(!isEditing)}
-                    colorScheme="red"
+                    colorScheme="blue"
                     aria-label={isEditing ? "수정 취소" : "목표 시간 수정"}
                   />
                 </HStack>
-                
+
                 {isEditing && (
                   <VStack mt={4} spacing={4}>
                     <HStack w="100%">
@@ -670,9 +487,10 @@ const TimerPage = () => {
                       />
                       <Button
                         onClick={updateTargetTime}
-                        colorScheme="pink"
+                        colorScheme="blue"
                         isLoading={isUpdating}
                         loadingText="수정 중..."
+                        disabled={!newTargetTime}
                       >
                         수정
                       </Button>
@@ -690,20 +508,26 @@ const TimerPage = () => {
                 <Stat textAlign="center">
                   <StatLabel fontSize="lg" color="gray.600">현재 시간</StatLabel>
                   <StatNumber fontSize="2xl" color="gray.800">
-                    {currentTime || '로딩 중...'}
+                    {new Date().toISOString().replace('T', ' ').substring(0, 19)}Z (UTC+0)
                   </StatNumber>
-                  <StatNumber fontSize="2xl" color="gray.800">
-                    {currentTimeLocal || '로딩 중...'}
+                  <StatNumber fontSize="xl" color="gray.600">
+                    {new Date().toLocaleString()} (UTC+9)
                   </StatNumber>
                 </Stat>
-                
+
                 <Divider />
-                
+
                 <Stat textAlign="center">
                   <StatLabel fontSize="lg" color="gray.600">남은 시간</StatLabel>
-                  <CountdownDisplay targetTime={timer?.targetTime} expired={timer?.expired} />
+                  <StatNumber
+                    fontSize="6xl"
+                    color={isExpired ? "red.500" : "blue.500"}
+                    fontWeight="bold"
+                  >
+                    {isExpired ? "⏰ 시간 종료!" : `⏳ ${remainingTime}`}
+                  </StatNumber>
                   <StatHelpText>
-                    {timer?.expired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
+                    {isExpired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
                   </StatHelpText>
                 </Stat>
               </VStack>
@@ -716,7 +540,7 @@ const TimerPage = () => {
               <HStack spacing={4} justify="center" flexWrap="wrap">
                 <Button
                   onClick={saveTimestamp}
-                  disabled={timer.expired}
+                  disabled={isExpired}
                   colorScheme="purple"
                   size="lg"
                   isLoading={isSaving}
@@ -725,7 +549,7 @@ const TimerPage = () => {
                 >
                   타임스탬프 저장
                 </Button>
-                
+
                 <Button
                   onClick={generateShareLink}
                   colorScheme="teal"
@@ -749,7 +573,7 @@ const TimerPage = () => {
                     <IconButton
                       icon={hasCopied ? <CheckIcon /> : <CopyIcon />}
                       onClick={onCopy}
-                      colorScheme={hasCopied ? "orange" : "yellow"}
+                      colorScheme={hasCopied ? "green" : "teal"}
                       aria-label="링크 복사"
                     />
                   </HStack>
@@ -764,7 +588,7 @@ const TimerPage = () => {
               <Heading size="md">저장된 타임스탬프</Heading>
             </CardHeader>
             <CardBody>
-              {timer.timestamps.length === 0 ? (
+              {!timer.timestamps || timer.timestamps.length === 0 ? (
                 <Text color="gray.500" textAlign="center" py={8}>
                   아직 저장된 타임스탬프가 없습니다.
                 </Text>
@@ -777,22 +601,20 @@ const TimerPage = () => {
                       bg="gray.50"
                       borderRadius="md"
                       borderLeft="4px solid"
-                      borderLeftColor="brand.500"
+                      borderLeftColor="purple.500"
                     >
                       <VStack align="start" spacing={2}>
-                        <HStack>
-                          <Badge colorScheme="purple" fontSize="md" px={2} py={1} borderRadius="md">
-                            ⏳ {ts.remainingTime}
-                          </Badge>
-                        </HStack>
-                        
+                        <Badge colorScheme="purple" fontSize="md" px={2} py={1} borderRadius="md">
+                          ⏳ {ts.remainingTime}
+                        </Badge>
+
                         <HStack spacing={4} mt={1}>
                           <VStack align="start" spacing={0}>
                             <Text fontSize="xs" fontWeight="bold" color="gray.500">
                               UTC+0
                             </Text>
                             <Text fontSize="sm" color="gray.700">
-                              {ts.capturedTime.replace('T', ' ').substring(0, 19)}Z
+                              {ts.capturedTime?.replace('T', ' ').substring(0, 19)}Z
                             </Text>
                           </VStack>
                           

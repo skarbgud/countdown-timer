@@ -4,6 +4,7 @@ import com.timer.countdown.dto.ResponseDto;
 import com.timer.countdown.dto.TimerDto;
 import com.timer.countdown.dto.TimerRequestDto;
 import com.timer.countdown.dto.TimestampDto;
+import com.timer.countdown.dto.TimestampRequestDto;
 import com.timer.countdown.service.TimerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -51,7 +52,7 @@ public class TimerController {
      * @return 타이머 정보 + 현재 사용자의 Owner 여부
      */
     @GetMapping("/{timerId}")
-    public ResponseEntity<ResponseDto<TimerDto>> getTimer(@PathVariable String timerId, HttpServletRequest request) {
+    public ResponseEntity<ResponseDto<TimerDto>> getTimer(@PathVariable("timerId") String timerId, HttpServletRequest request) {
         // 기존 세션이 있으면 가져오고 없으면 새로 생성
         HttpSession session = request.getSession(true);
 
@@ -73,7 +74,7 @@ public class TimerController {
      */
     @PutMapping("/{timerId}/target-time")
     public ResponseEntity<ResponseDto<TimerDto>> updateTargetTime(
-            @PathVariable String timerId,
+            @PathVariable("timerId") String timerId,
             @RequestBody Map<String, String> payload,
             HttpServletRequest request
     ) {
@@ -91,17 +92,15 @@ public class TimerController {
      * - 타이머가 만료되었으면 저장 불가
      *
      * @param timerId 타임스탬프를 저장할 타이머 ID
-     * @param payload 저장할 타임스탬프 정보 (remainingTime)
+     * @param requestDto 저장할 타임스탬프 정보
      * @return 저장된 타임스탬프 정보
      */
     @PostMapping("/{timerId}/timestamps")
     public ResponseEntity<ResponseDto<TimestampDto>> saveTimestamp(
-            @PathVariable String timerId,
-            @RequestBody Map<String, String> payload
+            @PathVariable("timerId") String timerId,
+            @RequestBody TimestampRequestDto requestDto
     ) {
-        String remainingTime = payload.get("remainingTime");
-
-        TimestampDto timestampDto = timerService.saveTimestamp(timerId, remainingTime);
+        TimestampDto timestampDto = timerService.saveTimestamp(timerId, requestDto.getRemainingTime());
 
         return ResponseEntity.ok(ResponseDto.success(timestampDto, "타임스탬프가 저장되었습니다."));
     }
@@ -114,7 +113,7 @@ public class TimerController {
      * @return 공유 링크 URL
      */
     @GetMapping("/{timerId}/share")
-    public ResponseEntity<ResponseDto<Map<String, String>>> generateShareLink(@PathVariable String timerId) {
+    public ResponseEntity<ResponseDto<Map<String, String>>> generateShareLink(@PathVariable("timerId") String timerId) {
         String shareUrl = timerService.generateShareUrl(timerId);
 
         Map<String, String> response = Map.of("shareUrl", shareUrl);
