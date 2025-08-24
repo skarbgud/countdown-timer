@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 import { WEBSOCKET_URL } from '../config/websocket';
 import {
@@ -29,10 +29,11 @@ import {
   StatNumber,
   StatHelpText,
 } from '@chakra-ui/react';
-import { CopyIcon, EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
+import { CopyIcon, EditIcon, CheckIcon, CloseIcon, ArrowBackIcon } from '@chakra-ui/icons';
 
 const TimerPage = () => {
   const { timerId } = useParams();
+  const navigate = useNavigate();
   const [timer, setTimer] = useState(null);
   const [remainingTime, setRemainingTime] = useState('');
   const [newTargetTime, setNewTargetTime] = useState('');
@@ -568,6 +569,19 @@ const TimerPage = () => {
                   <StatHelpText>
                     {isExpired ? '시간이 종료되었습니다' : '목표 시간까지 남은 시간'}
                   </StatHelpText>
+                  
+                  {/* 시간 종료 시 뒤로가기 버튼 */}
+                  {isExpired && (
+                    <Button
+                      onClick={() => navigate('/')}
+                      colorScheme="red"
+                      size="md"
+                      mt={4}
+                      leftIcon={<ArrowBackIcon />}
+                    >
+                      새 타이머 만들기
+                    </Button>
+                  )}
                 </Stat>
               </VStack>
             </CardBody>
