@@ -269,14 +269,12 @@ public class TimerWebSocketHandler implements WebSocketHandler {
      */
     private void sendMessage(WebSocketSession session, Map<String, Object> message) {
         try {
+            // 세션별 동기화를 위한 락 사용
             if (session.isOpen()) {
-                // 세션별 동기화를 위한 락 사용
                 Object sessionLock = sessionLocks.computeIfAbsent(session.getId(), k -> new Object());
                 synchronized (sessionLock) {
-                    if (session.isOpen()) { // 다시 한번 확인
-                        String jsonMessage = objectMapper.writeValueAsString(message);
-                        session.sendMessage(new TextMessage(jsonMessage));
-                    }
+                    String jsonMessage = objectMapper.writeValueAsString(message);
+                    session.sendMessage(new TextMessage(jsonMessage));
                 }
             }
         } catch (IOException e) {

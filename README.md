@@ -201,3 +201,19 @@ React 앱은 3000 포트에서 시작됩니다.
 ### - 프로파일 문제
 - `application.yml`에서 올바른 프로파일이 활성화되었는지 확인
 - 환경 변수 `SPRING_PROFILES_ACTIVE` 설정 확인
+
+
+### 5. 트러블 슈팅
+![img_1.png](img_1.png)
+- Render에서 타임스탬프 저장을 빠른 속도로 계속 누르게 되면 저장에 실패하는 현상 발생
+![img_2.png](img_2.png)
+- `TEXT_PARTIAL_WRITING` 에러 발생 동시성 문제를 위한 처리 생각
+![img_3.png](img_3.png)
+- WebSocketSession의 경우 Thread-safe 하지 않음 <br>
+  즉, 같은 세션에 대해 여러 스레드가 동시에 sendMessage를 호출하면 텍스트 메시지를 다 쓰기 전에 다른 쓰기 작업이 시작돼서 데이터 일관성이 깨져서 `TEXT_PARTIAL_WRITING`와 같이 에러가 발생
+- `@Synchronized` 통해서 메서드 단위의 락을 걸어서 하나의 한 스레드만 해당 메서드가 실행되게 수정해서 해결 <BR>
+CASE) `A THREAD` 실행중에 sendMessage 실행중 <br>
+동시에 들어온 다른 스레드인 `B THREAD`는 `A THREAD` 를 기다리고 처리하므로 한 세션에 순차적으로만 실행
+- 하지만 `@Synchronized` 로 메서드 전체를 동기화하니, 한 세션에서 메세지를 보내느 동안 다른 세션도 대기를 해야한다는 문제점
+![img_4.png](img_4.png)
+- 세션마다 개별 Lock을 잡고 처리하도록 수정, open된 세션만 동기화 락 처리 
