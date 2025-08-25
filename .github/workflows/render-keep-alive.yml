@@ -21,13 +21,38 @@ jobs:
           exit 1
         fi
         
-        echo "핑 시작: $RENDER_URL"
+        HEALTH_URL="${RENDER_URL}/health"
+        echo "핑 시작: $HEALTH_URL"
         
-        # 간단한 GET 요청으로 서버 깨우기
-        response=$(curl -s -w "%{http_code}" -o /dev/null "$RENDER_URL" --max-time 20)
+        # 재시도 횟수와 대기 시간 설정
+        MAX_RETRIES=3
+        RETRY_WAIT=10
+        SUCCESS=false
         
-        if [ "$response" -ge 200 ] && [ "$response" -lt 500 ]; then
-          echo "✅ 성공: HTTP $response - $(date)"
+        for i in $(seq 1 $MAX_RETRIES); do
+          echo "시도 $i/$MAX_RETRIES..."
+          
+          # 타임아웃 시간을 30초로 증가
+          response=$(curl -s -w "%{http_code}" -o /dev/null "$HEALTH_URL" --max-time 30)
+          
+          if [ "$response" -ge 200 ] && [ "$response" -lt 500 ]; then
+            echo "✅ 성공: HTTP $response - $(date)"
+            SUCCESS=true
+            break
+          else
+            echo "⚠️ 경고: HTTP $response - $(date)"
+            
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "$RETRY_WAIT초 후 재시도합니다..."
+              sleep $RETRY_WAIT
+            fi
+          fi
+        done
+        
+        if [ "$SUCCESS" = false ]; then
+          echo "❌ 실패: 최대 재시도 횟수($MAX_RETRIES)를 초과했습니다."
+          # 워크플로우가 실패하지 않도록 exit 1을 주석 처리하거나 제거할 수 있습니다
+          # exit 1
         else
-          echo "⚠️ 경고: HTTP $response - $(date)"
+          echo "서버가 성공적으로 활성화되었습니다."
         fi
