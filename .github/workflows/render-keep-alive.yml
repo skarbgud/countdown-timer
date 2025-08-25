@@ -2,15 +2,15 @@ name: Render Keep Alive
 
 on:
   schedule:
-    # 매 10분마다 실행 (더 자주 핑하여 확실하게 방지)
+    # 매 10분마다 실행
     - cron: '*/10 * * * *'
   workflow_dispatch: # 수동 실행 가능
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    
+    timeout-minutes: 8
+
     steps:
     - name: Keep Render Server Alive
       run: |
@@ -21,26 +21,38 @@ jobs:
           exit 1
         fi
         
+        # health 엔드포인트가 있으면 사용, 없으면 루트 경로 사용
         HEALTH_URL="${RENDER_URL}/health"
-        echo "핑 시작: $HEALTH_URL"
+        ROOT_URL="${RENDER_URL}"
         
-        # 재시도 횟수와 대기 시간 설정
+        echo "핑 시작: $HEALTH_URL"
+        echo "현재 시간: $(date)"
+        
+        # 재시도 설정
         MAX_RETRIES=3
-        RETRY_WAIT=10
+        RETRY_WAIT=15
         SUCCESS=false
         
+        # 첫 번째 시도: health 엔드포인트
         for i in $(seq 1 $MAX_RETRIES); do
-          echo "시도 $i/$MAX_RETRIES..."
+          echo "=== health 엔드포인트 시도 $i/$MAX_RETRIES ==="
           
-          # 타임아웃 시간을 30초로 증가
-          response=$(curl -s -w "%{http_code}" -o /dev/null "$HEALTH_URL" --max-time 30)
+          # 타임아웃을 90초로 증가 (Render cold start 고려)
+          response=$(curl -s -w "%{http_code}" -o /dev/null "$HEALTH_URL" \
+            --max-time 90 \
+            --connect-timeout 30 \
+            --retry 0)
+          curl_exit_code=$?
           
-          if [ "$response" -ge 200 ] && [ "$response" -lt 500 ]; then
-            echo "✅ 성공: HTTP $response - $(date)"
+          echo "curl 종료 코드: $curl_exit_code"
+          echo "HTTP 응답 코드: $response"
+          
+          if [ $curl_exit_code -eq 0 ] && [ "$response" -ge 200 ] && [ "$response" -lt 500 ]; then
+            echo "✅ health 엔드포인트 성공: HTTP $response - $(date)"
             SUCCESS=true
             break
           else
-            echo "⚠️ 경고: HTTP $response - $(date)"
+            echo "⚠️ health 엔드포인트 실패: curl_exit_code=$curl_exit_code, http_code=$response"
             
             if [ $i -lt $MAX_RETRIES ]; then
               echo "$RETRY_WAIT초 후 재시도합니다..."
@@ -49,10 +61,42 @@ jobs:
           fi
         done
         
+        # health 엔드포인트가 실패하면 루트 경로 시도
         if [ "$SUCCESS" = false ]; then
-          echo "❌ 실패: 최대 재시도 횟수($MAX_RETRIES)를 초과했습니다."
-          # 워크플로우가 실패하지 않도록 exit 1을 주석 처리하거나 제거할 수 있습니다
+          echo "=== 루트 경로로 대안 시도 ==="
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "루트 경로 시도 $i/$MAX_RETRIES: $ROOT_URL"
+            
+            response=$(curl -s -w "%{http_code}" -o /dev/null "$ROOT_URL" \
+              --max-time 90 \
+              --connect-timeout 30 \
+              --retry 0)
+            curl_exit_code=$?
+            
+            echo "curl 종료 코드: $curl_exit_code"
+            echo "HTTP 응답 코드: $response"
+            
+            if [ $curl_exit_code -eq 0 ] && [ "$response" -ge 200 ] && [ "$response" -lt 500 ]; then
+              echo "✅ 루트 경로 성공: HTTP $response - $(date)"
+              SUCCESS=true
+              break
+            else
+              echo "⚠️ 루트 경로 실패: curl_exit_code=$curl_exit_code, http_code=$response"
+              
+              if [ $i -lt $MAX_RETRIES ]; then
+                echo "$RETRY_WAIT초 후 재시도합니다..."
+                sleep $RETRY_WAIT
+              fi
+            fi
+          done
+        fi
+        
+        # 최종 결과 처리
+        if [ "$SUCCESS" = false ]; then
+          echo "❌ 실패: 모든 시도가 실패했습니다."
+          echo "Render 서버가 응답하지 않거나 시작하는데 시간이 오래 걸리고 있습니다."
+          # 워크플로우 실패를 방지하려면 아래 라인을 주석 처리하세요
           # exit 1
         else
-          echo "서버가 성공적으로 활성화되었습니다."
+          echo "🎉 서버가 성공적으로 활성화되었습니다!"
         fi
