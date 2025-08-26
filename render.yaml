@@ -9,7 +9,8 @@ services:
       - key: SERVER_PORT
         value: 8080
     autoDeploy: true
-    healthCheckPath: /
+    healthCheckPath: /health
+    healthCheckTimeout: 300
     numInstances: 1
 
 databases:
