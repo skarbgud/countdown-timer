@@ -5,16 +5,16 @@ services:
     image: postgres:15
     container_name: postgres-timer-db
     environment:
-      POSTGRES_PASSWORD: timer_password123
-      POSTGRES_DB: timer_db
-      POSTGRES_USER: timer_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-timer_db}
+      POSTGRES_USER: ${POSTGRES_USER:-timer_user}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U timer_user -d timer_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-timer_user} -d ${POSTGRES_DB:-timer_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,12 +26,12 @@ services:
       postgres-db:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: postgres-db
-      DB_PORT: 5432
-      DB_NAME: timer_db
-      DB_USERNAME: timer_user
-      DB_PASSWORD: timer_password123
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      DB_HOST: ${DB_HOST:-postgres-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-timer_db}
+      DB_USERNAME: ${DB_USERNAME:-timer_user}
+      DB_PASSWORD: ${DB_PASSWORD}
     ports:
       - "8088:8080"
     volumes:
@@ -47,7 +47,7 @@ services:
     depends_on:
       - timer-app
     environment:
-      - REACT_APP_API_URL=http://timer-app:8080
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://timer-app:8080}
     restart: unless-stopped
 
 volumes:

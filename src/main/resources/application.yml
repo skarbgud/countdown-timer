@@ -24,9 +24,9 @@ spring:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:postgresql://localhost:5432/timer_db
-    username: timer_user
-    password: timer_password123
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:timer_db}
+    username: ${DB_USERNAME:timer_user}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -55,7 +55,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgres-db}:${DB_PORT:5432}/${DB_NAME:timer_db}
     username: ${DB_USERNAME:timer_user}
-    password: ${DB_PASSWORD:timer_password123}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
