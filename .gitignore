@@ -65,8 +65,23 @@ src/main/resources/static/manifest.json
 
 # Docker
 oracle_data/
+docker-compose.override.yml
 
 # Application specific
 *.db
 *.sqlite
 *.h2.db
+
+# Environment & Configuration (민감한 정보)
+.env
+.env.*.local
+.env.prod
+
+# Application 설정 파일 (로컬/프로덕션 민감 정보)
+application-local.yml
+application-dev.yml
+application-prod.yml
+application-docker.yml
+
+# IDE 설정
+*.code-workspace
